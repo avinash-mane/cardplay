@@ -1,0 +1,28 @@
+{
+  "files": {
+    "main.css": "/cardplay/static/css/main.ab7136cd.chunk.css",
+    "main.js": "/cardplay/static/js/main.d8966a6e.chunk.js",
+    "main.js.map": "/cardplay/static/js/main.d8966a6e.chunk.js.map",
+    "runtime-main.js": "/cardplay/static/js/runtime-main.fce20a6c.js",
+    "runtime-main.js.map": "/cardplay/static/js/runtime-main.fce20a6c.js.map",
+    "static/css/2.20aa2d7b.chunk.css": "/cardplay/static/css/2.20aa2d7b.chunk.css",
+    "static/js/2.24e02798.chunk.js": "/cardplay/static/js/2.24e02798.chunk.js",
+    "static/js/2.24e02798.chunk.js.map": "/cardplay/static/js/2.24e02798.chunk.js.map",
+    "static/js/3.818b80f1.chunk.js": "/cardplay/static/js/3.818b80f1.chunk.js",
+    "static/js/3.818b80f1.chunk.js.map": "/cardplay/static/js/3.818b80f1.chunk.js.map",
+    "index.html": "/cardplay/index.html",
+    "static/css/2.20aa2d7b.chunk.css.map": "/cardplay/static/css/2.20aa2d7b.chunk.css.map",
+    "static/css/main.ab7136cd.chunk.css.map": "/cardplay/static/css/main.ab7136cd.chunk.css.map",
+    "static/js/2.24e02798.chunk.js.LICENSE.txt": "/cardplay/static/js/2.24e02798.chunk.js.LICENSE.txt",
+    "static/media/clap.ba7b35d2.mp3": "/cardplay/static/media/clap.ba7b35d2.mp3",
+    "static/media/clapman.d389f1c3.gif": "/cardplay/static/media/clapman.d389f1c3.gif",
+    "static/media/spin.16183bed.mp3": "/cardplay/static/media/spin.16183bed.mp3"
+  },
+  "entrypoints": [
+    "static/js/runtime-main.fce20a6c.js",
+    "static/css/2.20aa2d7b.chunk.css",
+    "static/js/2.24e02798.chunk.js",
+    "static/css/main.ab7136cd.chunk.css",
+    "static/js/main.d8966a6e.chunk.js"
+  ]
+}
