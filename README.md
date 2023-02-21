@@ -1,2 +1,2 @@
 # cardplay
-tambola
+https://avinash-mane.github.io/cardplay/
