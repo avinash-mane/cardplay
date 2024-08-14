@@ -130,9 +130,12 @@ function App() {
       </div>
       <div className="col-9 pt-2" style={{ height: "100%", backgroundColor: "#adb5bd", borderLeft: "1px solid" }}>
         <div>
-          <h1><b>Good Luck...!</b></h1>
+          <h1 className="mb-4">Good Luck...!</h1>
           <div class="d-flex mx-5 mb-5 bg-dark" style={{ borderColor: "#adb5bd", border: "5px solid #d5e4f3" }}>
             <Board />
+          </div>
+          <div className="d-flex justify-content-end mr-5">
+            <h3>Crafted by: Avinash Mane</h3>
           </div>
         </div>
       </div>
