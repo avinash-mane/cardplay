@@ -65,7 +65,7 @@
   width: 340px;
   height: 340px;
   transform: translateX(-50%);
-  background: radial-gradient(circle, rgba(255, 194, 71, 0.16), transparent 68%);
+  background: none;
   pointer-events: none;
 }
 
@@ -83,44 +83,21 @@
   min-height: clamp(178px, 46vw, 232px);
   aspect-ratio: 1;
   border-radius: 50%;
-  background: radial-gradient(circle at 32% 26%, #2b3468, #151a3c 58%, #0a0e24);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  box-shadow: inset 0 2px 18px rgba(255, 255, 255, 0.1),
-    inset 0 -22px 40px rgba(0, 0, 0, 0.55), 0 30px 60px -26px rgba(0, 0, 0, 0.95);
+  background: #0c1017;
+  border: 2px solid var(--tb-gold);
+  box-shadow: 0 20px 44px -26px rgba(0, 0, 0, 0.9);
 }
 
 .tb-orb::before {
   content: "";
   position: absolute;
-  inset: -7px;
+  inset: -8px;
   border-radius: 50%;
-  background: conic-gradient(
-    from 140deg,
-    rgba(124, 92, 255, 0.85),
-    rgba(34, 211, 238, 0.6),
-    rgba(255, 194, 71, 0.9),
-    rgba(124, 92, 255, 0.85)
-  );
-  opacity: 0.75;
-  filter: blur(1px);
-  z-index: -1;
-}
-
-.tb-orb::after {
-  content: "";
-  position: absolute;
-  top: 10%;
-  left: 16%;
-  width: 46%;
-  height: 26%;
-  border-radius: 50%;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.22), transparent);
-  filter: blur(4px);
-  pointer-events: none;
+  border: 1px dashed rgba(240, 180, 41, 0.4);
 }
 
 .tb-orb--spinning::before {
-  animation: tb-orb-spin 1.4s linear infinite;
+  animation: tb-orb-spin 3s linear infinite;
 }
 
 .tb-orb__number {
@@ -130,7 +107,7 @@
   line-height: 1;
   letter-spacing: -0.04em;
   color: #fff;
-  text-shadow: 0 0 30px rgba(255, 194, 71, 0.6), 0 6px 14px rgba(0, 0, 0, 0.55);
+  text-shadow: 0 6px 14px rgba(0, 0, 0, 0.55);
   animation: tb-number-pop 0.55s var(--tb-ease);
 }
 
@@ -216,8 +193,8 @@
   height: 50px;
   font-size: 1.25rem;
   color: #fff;
-  background: linear-gradient(160deg, rgba(124, 92, 255, 0.5), rgba(124, 92, 255, 0.14));
-  border-color: rgba(167, 139, 250, 0.55);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
 .tb-recent__empty {
@@ -257,8 +234,7 @@
 .tb-progress__fill {
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, var(--tb-violet), var(--tb-cyan) 55%, var(--tb-gold));
-  box-shadow: 0 0 16px rgba(124, 92, 255, 0.6);
+  background: var(--tb-gold);
   transition: width 0.6s var(--tb-ease);
 }
 
@@ -349,10 +325,8 @@
 .tb-cell.is-called {
   font-weight: 800;
   color: var(--tb-ink);
-  background: linear-gradient(160deg, #ffe08a, var(--tb-gold) 55%, var(--tb-gold-deep));
-  border-color: rgba(255, 255, 255, 0.55);
-  box-shadow: 0 8px 20px -10px rgba(255, 194, 71, 0.9),
-    inset 0 1px 0 rgba(255, 255, 255, 0.65);
+  background: var(--tb-gold);
+  border-color: var(--tb-gold);
 }
 
 /* non-colour cue: called numbers carry a corner marker */
@@ -364,15 +338,14 @@
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: rgba(16, 21, 44, 0.55);
+  background: rgba(20, 24, 31, 0.55);
 }
 
 .tb-cell.is-latest {
-  color: #fff;
-  background: linear-gradient(160deg, #a78bfa, var(--tb-violet) 55%, #5b3fd6);
-  border-color: rgba(255, 255, 255, 0.75);
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5),
-    0 10px 26px -8px rgba(124, 92, 255, 0.95);
+  color: var(--tb-ink);
+  background: #fff;
+  border-color: #fff;
+  box-shadow: 0 0 0 2px var(--tb-gold);
   animation: tb-cell-pulse 1.8s var(--tb-ease) infinite;
   z-index: 1;
 }
@@ -425,13 +398,14 @@
 }
 
 .tb-legend__swatch--called {
-  background: linear-gradient(160deg, #ffe08a, var(--tb-gold) 55%, var(--tb-gold-deep));
-  border-color: rgba(255, 255, 255, 0.5);
+  background: var(--tb-gold);
+  border-color: var(--tb-gold);
 }
 
 .tb-legend__swatch--latest {
-  background: linear-gradient(160deg, #a78bfa, var(--tb-violet) 55%, #5b3fd6);
-  border-color: rgba(255, 255, 255, 0.6);
+  background: #fff;
+  border-color: var(--tb-gold);
+  box-shadow: 0 0 0 2px var(--tb-gold);
 }
 
 /* ---------------------------------------------------------
@@ -439,11 +413,11 @@
    --------------------------------------------------------- */
 
 .tb-ticket {
-  --ticket-accent: var(--tb-violet);
+  --ticket-accent: #64748b;
   position: relative;
   padding: clamp(0.7rem, 1.6vw, 1rem);
-  background: linear-gradient(180deg, #fffdf8, #f4f1e8);
-  border: 1px solid rgba(16, 21, 44, 0.16);
+  background: #fdfcf9;
+  border: 1px solid rgba(20, 24, 31, 0.16);
   border-radius: var(--tb-radius);
   box-shadow: 0 24px 48px -26px rgba(0, 0, 0, 0.85),
     inset 0 1px 0 rgba(255, 255, 255, 0.9);
@@ -493,7 +467,7 @@
   display: grid;
   gap: 3px;
   padding: 4px;
-  background: rgba(16, 21, 44, 0.14);
+  background: rgba(20, 24, 31, 0.12);
   border-radius: 10px;
 }
 
@@ -517,7 +491,7 @@
   background: #fff;
   border: 0;
   border-radius: 7px;
-  box-shadow: inset 0 -2px 0 rgba(16, 21, 44, 0.07);
+  box-shadow: inset 0 -2px 0 rgba(20, 24, 31, 0.07);
 }
 
 .tb-ticket__cell--blank {
@@ -536,7 +510,7 @@
   font-size: 0.72rem;
   font-weight: 600;
   letter-spacing: 0.06em;
-  color: rgba(16, 21, 44, 0.55);
+  color: rgba(20, 24, 31, 0.55);
   text-transform: uppercase;
 }
 
@@ -548,14 +522,21 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-.tb-ticket--play .tb-ticket__cell:hover:not(.tb-ticket__cell--blank) {
-  background: #eef1ff;
-  transform: translateY(-1px);
+@media (hover: hover) {
+  .tb-ticket--play
+    .tb-ticket__cell:hover:not(.tb-ticket__cell--blank):not(.is-marked):not(.is-called) {
+    background: #f1f3f5;
+    transform: translateY(-1px);
+  }
+}
+
+.tb-ticket--play .tb-ticket__cell:focus {
+  outline: none;
 }
 
 .tb-ticket--play .tb-ticket__cell:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.6);
+  box-shadow: 0 0 0 3px rgba(240, 180, 41, 0.7);
 }
 
 .tb-ticket__cell--blank {
@@ -564,7 +545,7 @@
 
 .tb-ticket__cell.is-marked {
   color: #fff;
-  background: linear-gradient(160deg, #3f4a86, #232a55);
+  background: #475569;
   text-decoration: line-through;
   text-decoration-thickness: 2px;
   text-decoration-color: rgba(255, 255, 255, 0.75);
@@ -573,7 +554,7 @@
 
 .tb-ticket__cell.is-called {
   color: #fff;
-  background: linear-gradient(160deg, #3f4a86, #232a55);
+  background: #475569;
   text-decoration: line-through;
   text-decoration-thickness: 2px;
   text-decoration-color: rgba(255, 255, 255, 0.75);
@@ -680,8 +661,8 @@
   gap: 0.4rem;
   padding: 0.6rem;
   text-align: center;
-  background: linear-gradient(160deg, rgba(255, 194, 71, 0.2), rgba(124, 92, 255, 0.16));
-  border: 1px solid rgba(255, 194, 71, 0.4);
+  background: rgba(240, 180, 41, 0.12);
+  border: 1px solid rgba(240, 180, 41, 0.35);
   border-radius: var(--tb-radius-sm);
 }
 
@@ -869,7 +850,7 @@
   width: min(100%, 920px);
   margin: auto;
   padding: clamp(1.1rem, 3vw, 1.85rem);
-  background: linear-gradient(180deg, #171d3d, #0d1230);
+  background: #161b26;
   border: 1px solid var(--tb-border-strong);
   border-radius: var(--tb-radius-lg);
   box-shadow: var(--tb-shadow-lg);

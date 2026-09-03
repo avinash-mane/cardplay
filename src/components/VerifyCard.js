@@ -15,12 +15,12 @@ const wins = [
 const constSets = [1, 2, 3, 4, 5, 6];
 const colors = ["red", "green", "blue", "purple", "orange", "yellow"]
 const tints = {
-    red: "#e5484d",
-    green: "#30a46c",
-    blue: "#3e63dd",
-    purple: "#8e4ec6",
-    orange: "#f76b15",
-    yellow: "#ffb224"
+    red: "#a3564f",
+    green: "#4f7d63",
+    blue: "#4d6382",
+    purple: "#6b5a80",
+    orange: "#a9744a",
+    yellow: "#a08a43"
 }
 
 function VerifyCard({ openDialog, setOpenDialog, list }) {

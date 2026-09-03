@@ -8,12 +8,12 @@ import img from "../assets/clapman.gif"
 import { claimTicket, findAssignment, normalizeEmployeeCode } from "../assignments"
 const colors = ["red", "green", "blue", "purple", "orange", "yellow"]
 const tints = {
-    red: "#e5484d",
-    green: "#30a46c",
-    blue: "#3e63dd",
-    purple: "#8e4ec6",
-    orange: "#f76b15",
-    yellow: "#ffb224"
+    red: "#a3564f",
+    green: "#4f7d63",
+    blue: "#4d6382",
+    purple: "#6b5a80",
+    orange: "#a9744a",
+    yellow: "#a08a43"
 }
 let rows = ["top", "middle", "bottom"]
 const init = { all: 0, top: 0, bottom: 0, middle: 0, corner: 0 }
