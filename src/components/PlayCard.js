@@ -5,6 +5,7 @@ import { Button } from "react-bootstrap";
 import { useParams } from "react-router-dom"
 import claps from "../assets/clap.mp3"
 import img from "../assets/clapman.gif"
+import { claimTicket, findAssignment, normalizeEmployeeCode } from "../assignments"
 const colors = ["red", "green", "blue", "purple", "orange", "yellow"]
 const tints = {
     red: "#e5484d",
@@ -22,7 +23,12 @@ function PlayCard() {
     const [sets, setSets] = useState(1);
     const [id, setId] = useState("")
     const { ticketId } = useParams()
-    let tempId = ""
+    const [employeeCode, setEmployeeCode] = useState("")
+    const [employeeName, setEmployeeName] = useState("")
+    const [needsName, setNeedsName] = useState(false)
+    const [gateError, setGateError] = useState("")
+    const [isBusy, setIsBusy] = useState(false)
+    const [player, setPlayer] = useState(null)
     const [audio, setAudio] = useState(new Audio(claps));
     const [players, setPlayers] = useState(0);
     const [selectedCard, setSelectedCard] = useState([])
@@ -90,6 +96,50 @@ function PlayCard() {
 
     }, [id, list, players, sets])
 
+    const openAssignment = (record) => {
+        setPlayer(record)
+        setId(record.ticketId)
+    }
+
+    // Step 1: employee id only. Existing players go straight to their ticket.
+    const onLookup = async (event) => {
+        event.preventDefault()
+        setGateError("")
+        setIsBusy(true)
+        try {
+            const found = await findAssignment(employeeCode)
+            if (found) {
+                openAssignment(found)
+            } else {
+                setNeedsName(true)
+            }
+        } catch (err) {
+            setGateError(err.message || "Could not look up your employee id")
+        } finally {
+            setIsBusy(false)
+        }
+    }
+
+    // Step 2: first timer, so assign the next ticket in line.
+    const onClaim = async (event) => {
+        event.preventDefault()
+        setGateError("")
+        setIsBusy(true)
+        try {
+            openAssignment(await claimTicket({ employeeCode, name: employeeName }))
+        } catch (err) {
+            setGateError(err.message || "Could not assign a ticket")
+        } finally {
+            setIsBusy(false)
+        }
+    }
+
+    const onChangeCode = () => {
+        setNeedsName(false)
+        setEmployeeName("")
+        setGateError("")
+    }
+
     const onClick = (cardIndex, rowindex, colindex, col) => {
         if (col != 0) {
             let arr = [...myCard]
@@ -139,30 +189,86 @@ function PlayCard() {
                             <span className="tb-chip__dot" aria-hidden="true" />
                             Ticket {id}
                         </span>
+                        {player &&
+                            <span className="tb-chip">
+                                {player.employeeCode}{player.name ? ` · ${player.name}` : ""}
+                            </span>
+                        }
                     </div>
                 }
-                {id === "" &&
+                {id === "" && !needsName &&
                     <section className="tb-panel tb-gate">
-                        <h2 className="tb-gate__title">Enter your ticket id</h2>
+                        <h2 className="tb-gate__title">Enter your employee id</h2>
                         <p className="tb-gate__text">
-                            Your ticket id was shared by the game host. Enter it to open your card.
+                            We will open your ticket if you already have one, otherwise we will
+                            assign the next available ticket.
                         </p>
-                        <div className="tb-gate__form">
+                        <form className="tb-gate__form" onSubmit={onLookup}>
                             <div className="tb-field">
-                                <label className="tb-label" htmlFor="ticket-id">Ticket id</label>
+                                <label className="tb-label" htmlFor="employee-code">Employee id</label>
                                 <input
-                                    id="ticket-id"
+                                    id="employee-code"
                                     className="tb-input"
-                                    placeholder="insert you ticket id"
-                                    onChange={(e) => tempId = e.target.value} />
+                                    placeholder="e.g. PM199"
+                                    autoComplete="off"
+                                    autoCapitalize="characters"
+                                    value={employeeCode}
+                                    onChange={(e) => setEmployeeCode(e.target.value)} />
                             </div>
+                            {gateError &&
+                                <div className="tb-notice">
+                                    <strong>{gateError}</strong>
+                                </div>
+                            }
                             <Button
+                                type="submit"
                                 variant=""
                                 className="tb-btn tb-btn--success tb-btn--lg tb-btn--block"
-                                onClick={() => setId(tempId)}>
-                                Submit
+                                disabled={isBusy}>
+                                {isBusy ? "Checking…" : "Continue"}
                             </Button>
-                        </div>
+                        </form>
+                    </section>
+                }
+                {id === "" && needsName &&
+                    <section className="tb-panel tb-gate">
+                        <h2 className="tb-gate__title">Welcome!</h2>
+                        <p className="tb-gate__text">
+                            No ticket yet for <strong>{normalizeEmployeeCode(employeeCode)}</strong>.
+                            Enter your name and we will assign the next available ticket.
+                        </p>
+                        <form className="tb-gate__form" onSubmit={onClaim}>
+                            <div className="tb-field">
+                                <label className="tb-label" htmlFor="employee-name">Your name</label>
+                                <input
+                                    id="employee-name"
+                                    className="tb-input"
+                                    placeholder="your name"
+                                    autoComplete="name"
+                                    autoFocus
+                                    value={employeeName}
+                                    onChange={(e) => setEmployeeName(e.target.value)} />
+                            </div>
+                            {gateError &&
+                                <div className="tb-notice">
+                                    <strong>{gateError}</strong>
+                                </div>
+                            }
+                            <Button
+                                type="submit"
+                                variant=""
+                                className="tb-btn tb-btn--success tb-btn--lg tb-btn--block"
+                                disabled={isBusy}>
+                                {isBusy ? "Assigning…" : "Get my ticket"}
+                            </Button>
+                            <Button
+                                type="button"
+                                variant=""
+                                className="tb-btn tb-btn--ghost tb-btn--block"
+                                onClick={onChangeCode}>
+                                Use a different id
+                            </Button>
+                        </form>
                     </section>
                 }
 

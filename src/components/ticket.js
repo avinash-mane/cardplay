@@ -2,8 +2,9 @@ import React, { useEffect, useState } from "react";
 import { Button } from "react-bootstrap";
 import tamblo from "tambola-generator"
 import { useHistory } from 'react-router-dom';
-import { collection, updateDoc, doc } from "firebase/firestore"
+import { updateDoc, doc } from "firebase/firestore"
 import { fireStore } from "../firebase";
+import { claimTicket, listAssignments, normalizeEmployeeCode, removeAssignment } from "../assignments";
 
 const constSets = [1, 2, 3, 4, 5, 6];
 const colors = ["red", "green", "blue", "purple", "orange", "yellow"]
@@ -22,9 +23,152 @@ function Ticket() {
     const [sets, setSets] = useState(1);
     const [password, setPassword] = useState("")
     const [openField, setOpenField] = useState(false)
-
+    const [assignments, setAssignments] = useState([])
+    const [maxPlayers, setMaxPlayers] = useState(0)
+    const [remaining, setRemaining] = useState(0)
+    const [assignCode, setAssignCode] = useState("")
+    const [assignName, setAssignName] = useState("")
+    const [assignError, setAssignError] = useState("")
+    const [assignNotice, setAssignNotice] = useState("")
+    const [isAssigning, setIsAssigning] = useState(false)
+    const [isLoadingAssign, setIsLoadingAssign] = useState(false)
+    const [deletingCode, setDeletingCode] = useState("")
 
     const history = useHistory()
+
+    const refreshAssignments = async () => {
+        setIsLoadingAssign(true)
+        try {
+            const result = await listAssignments()
+            setAssignments(result.assignments)
+            setMaxPlayers(result.maxPlayers)
+            setRemaining(result.remaining)
+        } catch (err) {
+            setAssignError(err.message || "Could not load assignments")
+        } finally {
+            setIsLoadingAssign(false)
+        }
+    }
+
+    useEffect(() => {
+        refreshAssignments()
+    }, [])
+
+    const onManualAssign = async (event) => {
+        event.preventDefault()
+        setAssignError("")
+        setAssignNotice("")
+
+        const code = normalizeEmployeeCode(assignCode)
+        if (!code) {
+            setAssignError("Enter an employee id")
+            return
+        }
+        if (!(assignName || "").trim()) {
+            setAssignError("Enter the employee name")
+            return
+        }
+
+        const already = assignments.find(row => row.employeeCode === code)
+        if (already) {
+            setAssignError(
+                `${code} already has ticket ${already.ticketId}` +
+                (already.name ? ` (${already.name})` : "") +
+                ". A second ticket cannot be assigned to the same employee id."
+            )
+            return
+        }
+
+        setIsAssigning(true)
+        try {
+            const result = await claimTicket({ employeeCode: assignCode, name: assignName })
+            if (result.existing) {
+                setAssignError(
+                    `${result.employeeCode} already has ticket ${result.ticketId}` +
+                    (result.name ? ` (${result.name})` : "") +
+                    ". A second ticket cannot be assigned to the same employee id."
+                )
+            } else {
+                setAssignNotice(`Assigned ticket ${result.ticketId} to ${result.employeeCode}`)
+                setAssignCode("")
+                setAssignName("")
+            }
+            await refreshAssignments()
+        } catch (err) {
+            setAssignError(err.message || "Could not assign a ticket")
+        } finally {
+            setIsAssigning(false)
+        }
+    }
+
+    const onDeleteAssignment = async (row) => {
+        const confirmed = window.confirm(
+            `Remove ticket ${row.ticketId} from ${row.employeeCode}` +
+            (row.name ? ` (${row.name})` : "") +
+            "? That ticket number can be assigned again."
+        )
+        if (!confirmed) return
+
+        setAssignError("")
+        setAssignNotice("")
+        setDeletingCode(row.employeeCode)
+        try {
+            await removeAssignment(row.employeeCode)
+            setAssignNotice(`Removed ticket ${row.ticketId} from ${row.employeeCode}`)
+            await refreshAssignments()
+        } catch (err) {
+            setAssignError(err.message || "Could not remove that assignment")
+        } finally {
+            setDeletingCode("")
+        }
+    }
+
+    const downloadParticipantsExcel = () => {
+        if (!assignments.length) {
+            setAssignError("No participants to download yet")
+            return
+        }
+
+        const escapeXml = (value) => String(value ?? "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+
+        const rowsXml = assignments.map(row => `
+            <Row>
+                <Cell><Data ss:Type="Number">${row.ticketId}</Data></Cell>
+                <Cell><Data ss:Type="String">${escapeXml(row.employeeCode)}</Data></Cell>
+                <Cell><Data ss:Type="String">${escapeXml(row.name || "")}</Data></Cell>
+            </Row>`).join("")
+
+        const xml = `<?xml version="1.0"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+  <Worksheet ss:Name="Participants">
+    <Table>
+      <Row>
+        <Cell><Data ss:Type="String">Ticket</Data></Cell>
+        <Cell><Data ss:Type="String">Employee ID</Data></Cell>
+        <Cell><Data ss:Type="String">Name</Data></Cell>
+      </Row>
+      ${rowsXml}
+    </Table>
+  </Worksheet>
+</Workbook>`
+
+        const blob = new Blob([xml], { type: "application/vnd.ms-excel" })
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement("a")
+        const stamp = new Date().toISOString().slice(0, 10)
+        link.href = url
+        link.download = `tambola-participants-${stamp}.xls`
+        document.body.appendChild(link)
+        link.click()
+        link.remove()
+        URL.revokeObjectURL(url)
+    }
 
     const updateTickets = async () => {
         if (password === process.env.REACT_APP_ADMIN_PASSWORD) {
@@ -32,11 +176,13 @@ function Ticket() {
             let data = {
                 list: JSON.stringify(list),
                 players: parseInt(player),
-                sets: sets
+                sets: sets,
+                assigned_list: ""
             }
             await updateDoc(ticketDoc, data)
             alert("tickets uploaded successfully")
             setOpenField(false)
+            refreshAssignments()
         } else {
             alert("password mismatch")
         }
@@ -160,6 +306,109 @@ function Ticket() {
                         </div>
                     </div>
                 }
+
+                <section className="tb-panel" style={{ marginTop: "1.2rem" }} aria-label="Assigned tickets">
+                    <div className="tb-panel__head">
+                        <h2 className="tb-panel__title">Assigned tickets</h2>
+                        <span className="tb-chip">
+                            {assignments.length} / {maxPlayers || "—"} taken
+                            {remaining ? ` · ${remaining} left` : ""}
+                        </span>
+                    </div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginBottom: "0.4rem" }}>
+                    <Button
+                        variant=""
+                        className="tb-btn tb-btn--ghost tb-btn--sm"
+                        onClick={refreshAssignments}
+                        disabled={isLoadingAssign}>
+                        {isLoadingAssign ? "Refreshing…" : "Refresh"}
+                    </Button>
+                    <Button
+                        variant=""
+                        className="tb-btn tb-btn--gold tb-btn--sm"
+                        onClick={downloadParticipantsExcel}
+                        disabled={!assignments.length}>
+                        Download Excel
+                    </Button>
+                    </div>
+
+                    {assignments.length ?
+                        <div style={{ overflowX: "auto", marginTop: "0.8rem" }}>
+                            <table className="tb-assign-table">
+                                <thead>
+                                    <tr>
+                                        <th>Ticket</th>
+                                        <th>Employee id</th>
+                                        <th>Name</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {assignments.map(row =>
+                                        <tr key={`${row.employeeCode}-${row.ticketId}`}>
+                                            <td>{row.ticketId}</td>
+                                            <td>{row.employeeCode}</td>
+                                            <td>{row.name || "—"}</td>
+                                            <td>
+                                                <Button
+                                                    variant=""
+                                                    className="tb-btn tb-btn--ghost tb-btn--sm"
+                                                    onClick={() => onDeleteAssignment(row)}
+                                                    disabled={!!deletingCode}>
+                                                    {deletingCode === row.employeeCode ? "Removing…" : "Remove"}
+                                                </Button>
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div> :
+                        <p className="tb-assign-empty">
+                            {isLoadingAssign ? "Loading…" : "No employees have been assigned a ticket yet."}
+                        </p>
+                    }
+
+                    <form className="tb-assign-form" onSubmit={onManualAssign}>
+                        <div className="tb-field">
+                            <label className="tb-label" htmlFor="admin-emp-code">Employee id</label>
+                            <input
+                                id="admin-emp-code"
+                                className="tb-input"
+                                placeholder="e.g. PM199"
+                                autoComplete="off"
+                                value={assignCode}
+                                onChange={(e) => {
+                                    setAssignCode(e.target.value)
+                                    setAssignError("")
+                                    setAssignNotice("")
+                                }} />
+                        </div>
+                        <div className="tb-field">
+                            <label className="tb-label" htmlFor="admin-emp-name">Name</label>
+                            <input
+                                id="admin-emp-name"
+                                className="tb-input"
+                                placeholder="employee name"
+                                value={assignName}
+                                onChange={(e) => setAssignName(e.target.value)} />
+                        </div>
+                        <Button
+                            type="submit"
+                            variant=""
+                            className="tb-btn tb-btn--gold"
+                            disabled={isAssigning}>
+                            {isAssigning ? "Assigning…" : "Assign ticket"}
+                        </Button>
+                    </form>
+                    {assignError &&
+                        <div className="tb-notice" style={{ marginTop: "0.85rem" }}>
+                            <strong>{assignError}</strong>
+                        </div>
+                    }
+                    {assignNotice && !assignError &&
+                        <p className="tb-assign-empty">{assignNotice}</p>
+                    }
+                </section>
             </main>
         </div>
     );
