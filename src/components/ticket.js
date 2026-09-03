@@ -27,7 +27,7 @@ function Ticket() {
     const history = useHistory()
 
     const updateTickets = async () => {
-        if (password === "admin123") {
+        if (password === process.env.REACT_APP_ADMIN_PASSWORD) {
             const ticketDoc = doc(fireStore, "tickets", "tickets")
             let data = {
                 list: JSON.stringify(list),
