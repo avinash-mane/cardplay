@@ -1,3 +1,5 @@
+import './styles/theme.css';
+import './styles/game.css';
 import './App.css';
 import React from "react";
 import Main from "./components/main";
@@ -7,7 +9,7 @@ import { Route, Switch } from 'react-router-dom';
 
 function App() {
   return (
-    <div className="App" style={{ overflow: "hidden" }}>
+    <div className="App">
       <Switch>
         <Route path='/tickets' component={Ticket} />
         <Route path='/card/:ticketId' component={PlayCard} />

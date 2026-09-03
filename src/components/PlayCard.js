@@ -6,6 +6,14 @@ import { useParams } from "react-router-dom"
 import claps from "../assets/clap.mp3"
 import img from "../assets/clapman.gif"
 const colors = ["red", "green", "blue", "purple", "orange", "yellow"]
+const tints = {
+    red: "#e5484d",
+    green: "#30a46c",
+    blue: "#3e63dd",
+    purple: "#8e4ec6",
+    orange: "#f76b15",
+    yellow: "#ffb224"
+}
 let rows = ["top", "middle", "bottom"]
 const init = { all: 0, top: 0, bottom: 0, middle: 0, corner: 0 }
 
@@ -113,65 +121,119 @@ function PlayCard() {
         }
     }
 
+    const claimRows = (count) => ([
+        { label: "Early 5", done: count.all >= 5 },
+        { label: "Top Line", done: count.top == 5 },
+        { label: "Middle Line", done: count.middle == 5 },
+        { label: "Bottom Line", done: count.bottom == 5 },
+        { label: "Four Corners", done: count.corner == 4 },
+        { label: "Full House 1", done: count.all == 15 }
+    ])
+
     return (
-        <div style={{background: "peru"}}>
-            {id === "" && <div>
-                <input placeholder="insert you ticket id" className='m-5 p-3' onChange={(e) => tempId = e.target.value} />
-                <Button onClick={() => setId(tempId)} className='m-5' variant="success">Submit</Button>
-            </div>
-            }
-            {id && <h2>Ticket : {id}</h2>}
-            {selectedCard.map((card, cardindex) => <div style={{background: "#fff", border: "1px solid" }} className="d-sm-flex p-1 p-md-3 m-0 m-md-3">
-                <div className="w-sm-100 col-sm-9 p-0">
-                    {card._entries.map((row, rowindex) =>
-                        <div style={{ display: "flex", height: "30%" }}>
-                            {row.map((col, colindex) => <button
-                                style={{
-                                    // lexBasis: 0,
-                                    // flexGrow: 1,
-                                    // maxWidth: "100%",
-                                    width: "15%",
-                                    minWidth: "30px",
-                                    border: "1px solid",
-                                    display: "flex",
-                                    justifyContent: "center",
-                                    alignItems: "center",
-                                    fontSize: "20px",
-                                    padding: "2%",
-                                    background: col ? (myCard[cardindex][rowindex][colindex] ? "#6c757d" : "#fff") : colors[cardindex],
-                                    cursor: col ? "pointer" : "unset",
-                                    textDecoration: myCard[cardindex][rowindex][colindex] ? "line-through" : "none",
-                                    textDecorationThickness: myCard[cardindex][rowindex][colindex] ? "1px" : "none"
-                                }}
-                                onClick={(e) => onClick(cardindex, rowindex, colindex, col)}>
-                                {col || " "}</button>)}
-                        </div>)
+        <div className="tb-app">
+            <main className="tb-main">
+                {id !== "" &&
+                    <div className="tb-toolbar">
+                        <span className="tb-chip tb-chip--gold">
+                            <span className="tb-chip__dot" aria-hidden="true" />
+                            Ticket {id}
+                        </span>
+                    </div>
+                }
+                {id === "" &&
+                    <section className="tb-panel tb-gate">
+                        <h2 className="tb-gate__title">Enter your ticket id</h2>
+                        <p className="tb-gate__text">
+                            Your ticket id was shared by the game host. Enter it to open your card.
+                        </p>
+                        <div className="tb-gate__form">
+                            <div className="tb-field">
+                                <label className="tb-label" htmlFor="ticket-id">Ticket id</label>
+                                <input
+                                    id="ticket-id"
+                                    className="tb-input"
+                                    placeholder="insert you ticket id"
+                                    onChange={(e) => tempId = e.target.value} />
+                            </div>
+                            <Button
+                                variant=""
+                                className="tb-btn tb-btn--success tb-btn--lg tb-btn--block"
+                                onClick={() => setId(tempId)}>
+                                Submit
+                            </Button>
+                        </div>
+                    </section>
+                }
+
+                <div className="tb-playcard">
+                    <div className="tb-playcard__grid">
+                        {selectedCard.map((card, cardindex) => {
+                            const count = myCount[cardindex] || init
+                            const color = colors[cardindex]
+                            return (
+                                <section
+                                    className="tb-panel tb-playcard__card"
+                                    key={`card-${cardindex}`}
+                                    aria-label={`Ticket set ${color}`}>
+                                    <div className="tb-ticket tb-ticket--play" style={{ "--ticket-accent": tints[color] || color }}>
+                                        <div className="tb-ticket__head">
+                                            <span className="tb-ticket__id">Ticket {id}</span>
+                                            <span className="tb-ticket__tag">{color}</span>
+                                        </div>
+                                        <div className="tb-ticket__grid">
+                                            {card._entries.map((row, rowindex) =>
+                                                <div className="tb-ticket__row" key={`row-${rowindex}`}>
+                                                    {row.map((col, colindex) => {
+                                                        const marked = myCard[cardindex]?.[rowindex]?.[colindex]
+                                                        return (
+                                                            <button
+                                                                type="button"
+                                                                key={`cell-${rowindex}-${colindex}`}
+                                                                className={`tb-ticket__cell ${col ? "" : "tb-ticket__cell--blank"} ${marked ? "is-marked" : ""}`}
+                                                                aria-pressed={col ? !!marked : undefined}
+                                                                aria-label={col ? `${col}${marked ? ", marked" : ""}` : "blank"}
+                                                                onClick={(e) => onClick(cardindex, rowindex, colindex, col)}>
+                                                                {col || " "}
+                                                            </button>
+                                                        )
+                                                    })}
+                                                </div>)
+                                            }
+                                        </div>
+                                        <div className="tb-ticket__foot">{count.all} / 15 marked</div>
+                                    </div>
+
+                                    {count.all == 15 && showGIF == cardindex + 1 ?
+                                        <div className="tb-celebrate">
+                                            <img src={img} alt="Applause" />
+                                            <span>Full House!</span>
+                                        </div> :
+                                        <div className="tb-claimlist">
+                                            <div className="tb-claimlist__title">Claims</div>
+                                            {claimRows(count).map(claim =>
+                                                <div
+                                                    className={`tb-claimlist__row ${claim.done ? "is-done" : ""}`}
+                                                    key={claim.label}>
+                                                    <span>{claim.label}</span>
+                                                    <span>{claim.done ? <>&#x2705;</> : <>&#10060;</>}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    }
+                                </section>
+                            )
+                        })}
+                    </div>
+
+                    {id !== "" && players != 0 && (parseInt(id) > players || id <= 0) &&
+                        <div className="tb-notice">
+                            <strong>Card not found</strong>
+                            <span>Check the ticket id with your host and try again.</span>
+                        </div>
                     }
                 </div>
-                {myCount[cardindex].all == 15 ?
-                    showGIF == cardindex + 1 && <img src={img} height="180px" className="p-2"></img> :
-                    <div style={{ textAlign: "left", marginLeft: "10px", fontSize: "14px", fontWeight: "600" }}>
-                        <div style={{ padding: "3px" }}>
-                            Early 5: {myCount[cardindex].all >= 5 ? <>&#x2705;</> : <>&#10060;</>}
-                        </div>
-                        <div style={{ padding: "3px" }}>
-                            Top Line: {myCount[cardindex].top == 5 ? <>&#x2705;</> : <>&#10060;</>}
-                        </div>
-                        <div style={{ padding: "3px" }}>
-                            Middle Line: {myCount[cardindex].middle == 5 ? <>&#x2705;</> : <>&#10060;</>}
-                        </div>
-                        <div style={{ padding: "3px" }}>
-                            Bottom Line: {myCount[cardindex].bottom == 5 ? <>&#x2705;</> : <>&#10060;</>}
-                        </div>
-                        <div style={{ padding: "3px" }}>
-                            Four Corners: {myCount[cardindex].corner == 4 ? <>&#x2705;</> : <>&#10060;</>}
-                        </div>
-                        <div style={{ padding: "3px" }}>
-                            Full House 1: {myCount[cardindex].all == 15 ? <>&#x2705;</> : <>&#10060;</>}
-                        </div>
-                    </div>}
-            </div>)}
-            {id !== "" && players != 0 && (parseInt(id) > players || id <= 0) && <h1>Card Not Found</h1>}
+            </main>
         </div>
     );
 }

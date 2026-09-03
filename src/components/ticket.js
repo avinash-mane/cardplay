@@ -7,6 +7,14 @@ import { fireStore } from "../firebase";
 
 const constSets = [1, 2, 3, 4, 5, 6];
 const colors = ["red", "green", "blue", "purple", "orange", "yellow"]
+const tints = {
+    red: "#e5484d",
+    green: "#30a46c",
+    blue: "#3e63dd",
+    purple: "#8e4ec6",
+    orange: "#f76b15",
+    yellow: "#ffb224"
+}
 
 function Ticket() {
     const [list, setList] = useState([]);
@@ -42,18 +50,31 @@ function Ticket() {
         const func = (card, index) => {
             let myID = Math.floor(index / sets) + 1
             let color = colors[index % sets]
-            return <><div className="mb-4">
-                <div id={`${myID}_${color}`} style={{ marginLeft: "20px", padding: "30px", background: "#fff" }} className="border border-success" >
-                    <span>{color}</span>
-                    {card._entries.map(row =>
-                        <div class="row ">
-                            {row.map(col => <div class="col border border-dark" style={{ width: "40px", height: "40px", display: "flex", justifyContent: "center", alignItems: "center", fontSize: "20px", background: col ? "#fff" : color }}>{col || " "}</div>)}
-                        </div>)
-                    }
-                    <span> ticket : {`${myID}_${color}`}</span>
+            return (
+                <div
+                    key={`${myID}_${color}_${index}`}
+                    id={`${myID}_${color}`}
+                    className="tb-ticket"
+                    style={{ "--ticket-accent": tints[color] || color }}>
+                    <div className="tb-ticket__head">
+                        <span className="tb-ticket__id">Ticket {myID}</span>
+                        <span className="tb-ticket__tag">{color}</span>
+                    </div>
+                    <div className="tb-ticket__grid">
+                        {card._entries.map((row, rowindex) =>
+                            <div className="tb-ticket__row" key={`row-${rowindex}`}>
+                                {row.map((col, colindex) =>
+                                    <div
+                                        key={`cell-${rowindex}-${colindex}`}
+                                        className={`tb-ticket__cell ${col ? "" : "tb-ticket__cell--blank"}`}>
+                                        {col || " "}
+                                    </div>)}
+                            </div>)
+                        }
+                    </div>
+                    <div className="tb-ticket__foot">ticket : {`${myID}_${color}`}</div>
                 </div>
-            </div>
-            </>
+            )
         }
         return func;
     }
@@ -61,40 +82,87 @@ function Ticket() {
     const tempCard = Card();
 
     return (
-        <>
-            {!list.length ?
-                <div className="row" style={{ height: "100vh", background: "#cccbab", width: "100%", display: "flex", justifyContent: "center", alignItems: "center" }}>
-                    <div>
-                        <Button onClick={() => history.push("/")} size="sm" variant="success" className="mb-2">Home</Button>
-                        <div>
-                            <input style={{ padding: "10px" }} placeholder="enter number of players" onChange={(e) => setPlayers(e.target.value)} type="number" />
-                        </div>
-                        <div className="mt-2">
-                            <label className="mr-3">select number of sets : </label>
-                            <select onChange={(e) => setSets(parseInt(e.target.value))} className="px-2 py-1">
-                                {constSets.map(set => <option value={set} >{set}</option>)}
-                            </select>
-                        </div>
-                        <div className="mt-5">
-                            <Button onClick={handelSubmit} variant="success">Generate Tickets</Button>
-                        </div>
-                    </div>
-                </div> :
-                <div style={{ background: "#cccbab" }} className="mb-5">
-                    <Button onClick={() => history.push("/")} size="sm" variant="success" className="mb-2">Home</Button>
-                    <Button onClick={() => setOpenField(v => !v)} size="sm" variant="warning" className="ml-2 mb-2">Upload Ticket</Button>
-                    {openField && <div>
-                        <input type="text" value={password} onChange={(e) => setPassword(e.target.value)} />
-                        <Button onClick={updateTickets} size="sm" variant="primary" className="ml-2 mb-2">Submit</Button>
-                    </div>}
-                    <div className="row" >
-                        {list.map((ticket, index) => tempCard(ticket, index))}
-                    </div>
+        <div className="tb-app">
+            <main className="tb-main">
+                <div className="tb-toolbar">
+                    <Button variant="" className="tb-btn tb-btn--ghost tb-btn--sm" onClick={() => history.push("/")}>
+                        &#8592; Home
+                    </Button>
+                    {list.length > 0 &&
+                        <Button variant="" className="tb-btn tb-btn--gold tb-btn--sm" onClick={() => setOpenField(v => !v)}>
+                            Upload Tickets
+                        </Button>
+                    }
                 </div>
-            }
-        </>
+                {!list.length ?
+                    <section className="tb-panel tb-gate">
+                        <h2 className="tb-gate__title">Set up the game</h2>
+                        <p className="tb-gate__text">
+                            Choose how many players are joining and how many ticket sets each of
+                            them receives.
+                        </p>
+                        <div className="tb-gate__form">
+                            <div className="tb-field">
+                                <label className="tb-label" htmlFor="player-count">Number of players</label>
+                                <input
+                                    id="player-count"
+                                    className="tb-input"
+                                    placeholder="enter number of players"
+                                    onChange={(e) => setPlayers(e.target.value)}
+                                    type="number" />
+                            </div>
+                            <div className="tb-field">
+                                <label className="tb-label" htmlFor="set-count">Sets per player</label>
+                                <select
+                                    id="set-count"
+                                    onChange={(e) => setSets(parseInt(e.target.value))}
+                                    className="tb-select">
+                                    {constSets.map(set => <option key={set} value={set}>{set}</option>)}
+                                </select>
+                            </div>
+                            <Button
+                                variant=""
+                                className="tb-btn tb-btn--success tb-btn--lg tb-btn--block"
+                                onClick={handelSubmit}>
+                                Generate Tickets
+                            </Button>
+                        </div>
+                    </section> :
+                    <div className="tb-stack">
+                        <section className="tb-panel">
+                            <div className="tb-panel__head">
+                                <h2 className="tb-panel__title">Generated tickets</h2>
+                                <span className="tb-chip">
+                                    {list.length} tickets &middot; {sets} set{sets > 1 ? "s" : ""} each
+                                </span>
+                            </div>
+                            {openField &&
+                                <div className="tb-inline-form">
+                                    <input
+                                        type="password"
+                                        className="tb-input"
+                                        placeholder="admin password"
+                                        aria-label="Admin password"
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)} />
+                                    <Button
+                                        variant=""
+                                        className="tb-btn tb-btn--primary"
+                                        onClick={updateTickets}>
+                                        Submit
+                                    </Button>
+                                </div>
+                            }
+                        </section>
+
+                        <div className="tb-tickets__grid">
+                            {list.map((ticket, index) => tempCard(ticket, index))}
+                        </div>
+                    </div>
+                }
+            </main>
+        </div>
     );
 }
 
 export default React.memo(Ticket);
-

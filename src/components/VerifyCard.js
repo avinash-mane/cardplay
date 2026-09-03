@@ -14,6 +14,14 @@ const wins = [
 
 const constSets = [1, 2, 3, 4, 5, 6];
 const colors = ["red", "green", "blue", "purple", "orange", "yellow"]
+const tints = {
+    red: "#e5484d",
+    green: "#30a46c",
+    blue: "#3e63dd",
+    purple: "#8e4ec6",
+    orange: "#f76b15",
+    yellow: "#ffb224"
+}
 
 function VerifyCard({ openDialog, setOpenDialog, list }) {
     const [id, setId] = useState()
@@ -46,44 +54,84 @@ function VerifyCard({ openDialog, setOpenDialog, list }) {
 
     const changeColor = (e) => setColor(e.target.value)
 
+    const markedCount = selectedCard?._entries
+        ? selectedCard._entries.flat().filter(col => col && list.includes(col)).length
+        : 0
+
     return (
-        <dialog open={openDialog}>
-            <div>
-                <div>
-                    <input className="mr-3 p-1" style={{ width: "100px" }} placeholder="card id" onChange={(e) => setId(e.target.value)} type="number" />
-                    <label className="mr-2">select Color : </label>
-                    <select onChange={changeColor} className="px-2 py-1" >
-                        {colors.map((c, index) => index < onlineCards.sets && <option value={c} style={{ background: c }}>{c}</option>)}
-                    </select>
+        <dialog open={openDialog} className="tb-dialog" aria-label="Verify a ticket">
+            <div className="tb-dialog__panel">
+                <div className="tb-dialog__head">
+                    <div>
+                        <h2 className="tb-dialog__title">Verify Ticket</h2>
+                        <p className="tb-dialog__sub">Cross-check a claim against called numbers</p>
+                    </div>
+                    <button
+                        type="button"
+                        className="tb-dialog__close"
+                        aria-label="Close verify dialog"
+                        onClick={onCloseDialog}>
+                        &#10005;
+                    </button>
                 </div>
-            </div>
-            <div className="p-2">
-                {id !== "" && onlineCards.players != 0 && (parseInt(id) > onlineCards.players || id <= 0) ?
-                    <h3>Card Not Found</h3> :
-                    <>{selectedCard?._entries?.map((row, rowindex) =>
-                        <div style={{ display: "flex" }}>
-                            {row.map((col) => <button
-                                style={{
-                                    width: "15%",
-                                    minWidth: "40px",
-                                    border: "1px solid",
-                                    display: "flex",
-                                    justifyContent: "center",
-                                    alignItems: "center",
-                                    fontSize: "20px",
-                                    padding: "2%",
-                                    background: col ? list.includes(col) ? "#6c757d" : "#fff" : color,
-                                    cursor: col ? "pointer" : "unset",
-                                    textDecoration: list.includes(col) ? "line-through" : "none",
-                                    textDecorationThickness: list.includes(col) ? "1px" : "none"
-                                }}>
-                                {col || " "}</button>)}
-                        </div>)
-                    }</>
-                }
-            </div>
-            <div className="d-flex justify-content-end">
-                <button type="button" class="btn btn-outline-danger btn-sm" onClick={onCloseDialog}>close</button>
+
+                <div className="tb-dialog__fields">
+                    <div className="tb-field">
+                        <label className="tb-label" htmlFor="verify-card-id">Card id</label>
+                        <input
+                            id="verify-card-id"
+                            className="tb-input"
+                            placeholder="e.g. 4"
+                            onChange={(e) => setId(e.target.value)}
+                            type="number" />
+                    </div>
+                    <div className="tb-field">
+                        <label className="tb-label" htmlFor="verify-card-color">Set colour</label>
+                        <select id="verify-card-color" onChange={changeColor} className="tb-select">
+                            {colors.map((c, index) => index < onlineCards.sets &&
+                                <option key={c} value={c} style={{ background: c }}>{c}</option>)}
+                        </select>
+                    </div>
+                </div>
+
+                <div className="tb-dialog__body">
+                    {id !== "" && onlineCards.players != 0 && (parseInt(id) > onlineCards.players || id <= 0) ?
+                        <div className="tb-notice">
+                            <strong>Card not found</strong>
+                            <span>Enter a valid ticket id between 1 and {onlineCards.players}</span>
+                        </div> :
+                        <>
+                            {selectedCard?._entries && (
+                                <div className="tb-ticket tb-ticket--verify" style={{ "--ticket-accent": tints[color] || color }}>
+                                    <div className="tb-ticket__head">
+                                        <span className="tb-ticket__id">Ticket {id || "—"}</span>
+                                        <span className="tb-ticket__tag">{color}</span>
+                                    </div>
+                                    <div className="tb-ticket__grid">
+                                        {selectedCard._entries.map((row, rowindex) =>
+                                            <div className="tb-ticket__row" key={`row-${rowindex}`}>
+                                                {row.map((col, colindex) => <div
+                                                    key={`cell-${rowindex}-${colindex}`}
+                                                    className={`tb-ticket__cell ${col ? "" : "tb-ticket__cell--blank"} ${col && list.includes(col) ? "is-called" : ""}`}
+                                                    title={col ? (list.includes(col) ? `${col} — called` : `${col} — not called`) : undefined}>
+                                                    {col || " "}</div>)}
+                                            </div>)
+                                        }
+                                    </div>
+                                    <div className="tb-ticket__foot">
+                                        {markedCount} / 15 numbers called
+                                    </div>
+                                </div>
+                            )}
+                        </>
+                    }
+                </div>
+
+                <div className="tb-dialog__foot">
+                    <button type="button" className="tb-btn tb-btn--ghost tb-btn--sm" onClick={onCloseDialog}>
+                        Close
+                    </button>
+                </div>
             </div>
         </dialog>
     );

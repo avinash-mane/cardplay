@@ -3,15 +3,18 @@ import { Button, Spinner, FormCheck } from "react-bootstrap";
 import { useHistory } from 'react-router-dom';
 import sound from "../assets/spin.mp3"
 import VerifyCard from "./VerifyCard";
+import PlayCardQr from "./PlayCardQr";
+import Footer from "./Footer";
 const wins = [
   "Early 5",
   "Top Line",
   "Middle Line",
   "Bottom Line",
   "Four Corners",
-  "Full House 1",
-  " Full House 2"
+  "Full House 1"
 ]
+
+const TOTAL_NUMBERS = 90
 
 function App() {
   const [list, setList] = useState([]);
@@ -20,6 +23,7 @@ function App() {
   const [audio, setAudio] = useState(new Audio(sound));
   const history = useHistory();
   const [openDialog, setOpenDialog] = useState(false)
+  const [openPlayCard, setOpenPlayCard] = useState(false)
 
   const onOpenDialog = () => setOpenDialog(true)
 
@@ -62,19 +66,30 @@ function App() {
     }
   }
 
+  const latest = list.length ? list[list.length - 1] : null
+  const previous = list.length > 1 ? list[list.length - 2] : null
+  const recent = list.slice(0, -1).slice(-5).reverse()
+  const isComplete = list.length >= TOTAL_NUMBERS
+
   const Board = () => {
     let tempList = []
     let row = []
     for (let i = 1; i <= 90; i++) {
+      const isCalled = list.includes(i)
+      const isLatest = latest === i
 
-      row.push(<div
-        className={`col  ${list.includes(i) ? "border-danger" : ""} rounded-pill mx-2 my-2`}
-        style={{ backgroundColor: list.includes(i) ? "#d5e4f3" : "" }}>
-        <span style={{ fontSize: "25px", color: !list.includes(i) ? "#6c757d" : "", fontWeight: !list.includes(i) ? "100" : "bold" }}><b>{i}</b></span>
-      </div>)
+      row.push(
+        <div
+          key={i}
+          className={`tb-cell ${isCalled ? "is-called" : ""} ${isLatest ? "is-latest" : ""}`}
+          aria-label={`${i} ${isCalled ? "called" : "not called"}`}
+          title={isCalled ? `${i} — called` : `${i} — not called`}>
+          {i}
+        </div>
+      )
 
       if (i % 10 === 0) {
-        tempList.push(<div className="row" style={{ margin: "0px", width: "auto", borderLeft: "1px solid #fff", borderRight: "1px solid" }}>{row}</div>)
+        tempList.push(<div className="tb-board__row" key={`row-${i}`}>{row}</div>)
         row = []
       }
     }
@@ -82,64 +97,113 @@ function App() {
   }
 
   return (
-    <div className="row" style={{ height: "100vh", border: "2px solid" }}>
-      <div className="col-3 d-flex align-items-center flex-column pt-3" style={{ backgroundColor: "#adb5bd" }}>
-        <div className="d-flex justify-content-center">
-          <Button variant="info" onClick={handleOnReset} size="sm">
-            Reset
-          </Button>
-          <Button className="ml-3" variant="secondary" onClick={() => history.push("/tickets")} size="sm">
-            generate tickets
-          </Button>
-          <Button className="ml-3" style={{ zIndex: 1 }} variant="warning" onClick={() => history.push("/card")} size="sm">
-            Play Card
-          </Button>
-          <Button className="ml-3" style={{ zIndex: 1 }} variant="danger" onClick={onOpenDialog} size="sm">
-            Verify Card
-          </Button>
-        </div>
-        <div style={{ fontSize: "20px" }} className="pt-2">Previous</div>
-        <div style={{ width: "100px", height: "100px" }} className="d-flex align-items-center justify-content-center border border-secondary rounded-circle mb-1" >
-          {list.length !== 0 &&
-            <span style={{ fontSize: "60px", color: "grey" }}>
-              {list[list.length - 2]}
-            </span>
-          }
-        </div>
-        <div style={{ width: "200px", height: "200px", background: "#d5e4f3" }} className="d-flex align-items-center justify-content-center border border-dark rounded-circle" >
-          {isWating ?
-            <span style={{ fontSize: "135px", color: "grey" }}>
-              {spinner}
-            </span> :
-            list.length ?
-              <span style={{ fontSize: list.length != 0 ? "135px" : "50px", fontWeight: "bold" }}>
-                {list[list.length - 1]}
-              </span> :
-              <h2>Start With Spin &#x21e9;</h2>
-          }
-        </div>
-        <Button className="mt-3" onClick={handleOnClick} disabled={isWating}>
-          {isWating ?
-            <Spinner animation="border" variant="info" /> :
-            <>Spin &#x27F3;</>
-          }
-        </Button>
-        <div class="d-flex flex-wrap mt-2 mx-4">
-          {wins.map(label => <FormCheck style={{ width: "120px", textAlign: "left" }} className="p-2" label={label} />)}
-        </div>
-      </div>
-      <div className="col-9 pt-2" style={{ height: "100%", backgroundColor: "#adb5bd", borderLeft: "1px solid" }}>
-        <div>
-          <h1 className="mb-4">Good Luck...!</h1>
-          <div class="d-flex mx-5 mb-5 bg-dark" style={{ borderColor: "#adb5bd", border: "5px solid #d5e4f3" }}>
-            <Board />
+    <div className="tb-app">
+      <main className="tb-main">
+        <div className="tb-layout">
+          <div className="tb-layout__side">
+            <nav className="tb-side-actions" aria-label="Game actions">
+              <Button variant="" className="tb-btn tb-btn--ghost tb-btn--sm" onClick={handleOnReset}>
+                Reset
+              </Button>
+              <Button variant="" className="tb-btn tb-btn--ghost tb-btn--sm" onClick={() => history.push("/tickets")}>
+                Generate Tickets
+              </Button>
+              <Button variant="" className="tb-btn tb-btn--gold tb-btn--sm" onClick={() => setOpenPlayCard(true)}>
+                Play Card
+              </Button>
+              <Button variant="" className="tb-btn tb-btn--primary tb-btn--sm" onClick={onOpenDialog}>
+                Verify Card
+              </Button>
+            </nav>
+
+            <section className="tb-panel tb-caller" aria-label="Number caller">
+              <span className="tb-chip tb-chip--gold">
+                <span className="tb-chip__dot" aria-hidden="true" />
+                {isComplete ? "All numbers called" : isWating ? "Drawing…" : "Ready to draw"}
+              </span>
+
+              <div className={`tb-orb ${isWating ? "tb-orb--spinning" : ""}`} aria-live="polite">
+                {isWating ? (
+                  <span className="tb-orb__number tb-orb__number--rolling">{spinner}</span>
+                ) : latest ? (
+                  <span className="tb-orb__number" key={latest}>{latest}</span>
+                ) : (
+                  <span className="tb-orb__idle">
+                    <strong>Good luck!</strong>
+                    <span>Hit spin to call the first number</span>
+                  </span>
+                )}
+              </div>
+
+              <Button
+                variant=""
+                className="tb-btn tb-btn--gold tb-btn--lg tb-btn--block"
+                onClick={handleOnClick}
+                disabled={isWating}>
+                {isWating ?
+                  <Spinner animation="border" size="sm" role="status" /> :
+                  <>Spin &#x27F3;</>
+                }
+              </Button>
+
+              <div className="tb-recent">
+                <span className="tb-recent__label">Previous</span>
+                {previous ? (
+                  <span className="tb-recent__ball tb-recent__ball--previous">{previous}</span>
+                ) : (
+                  <span className="tb-recent__empty">No previous number yet</span>
+                )}
+                {recent.slice(1).map((n, index) => (
+                  <span className="tb-recent__ball" key={`${n}-${index}`}>{n}</span>
+                ))}
+              </div>
+
+              <div className="tb-progress">
+                <div className="tb-progress__meta">
+                  <span><b>{list.length}</b> called</span>
+                  <span><b>{TOTAL_NUMBERS - list.length}</b> remaining</span>
+                </div>
+                <div
+                  className="tb-progress__track"
+                  role="progressbar"
+                  aria-valuenow={list.length}
+                  aria-valuemin={0}
+                  aria-valuemax={TOTAL_NUMBERS}>
+                  <div
+                    className="tb-progress__fill"
+                    style={{ width: `${(list.length / TOTAL_NUMBERS) * 100}%` }} />
+                </div>
+              </div>
+            </section>
+
+            <section className="tb-panel" aria-label="Claims">
+              <div className="tb-panel__head">
+                <h2 className="tb-panel__title">Claims</h2>
+              </div>
+              <div className="tb-claims">
+                {wins.map((label, index) =>
+                  <FormCheck
+                    key={label}
+                    id={`claim-${index}`}
+                    className="tb-claim"
+                    label={label.trim()} />
+                )}
+              </div>
+            </section>
+
+            <Footer />
+
           </div>
-          <div className="d-flex justify-content-end mr-5">
-            <h3>Crafted by: Avinash Mane</h3>
-          </div>
+
+          <section className="tb-panel" aria-label="Number board">
+            <div className="tb-board">
+              <Board />
+            </div>
+          </section>
         </div>
-      </div>
-      <VerifyCard openDialog={openDialog} setOpenDialog={setOpenDialog} list={list}/>
+      </main>
+      <VerifyCard openDialog={openDialog} setOpenDialog={setOpenDialog} list={list} />
+      <PlayCardQr openDialog={openPlayCard} setOpenDialog={setOpenPlayCard} />
     </div>
   );
 }
