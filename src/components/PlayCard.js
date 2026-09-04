@@ -184,17 +184,25 @@ function PlayCard() {
         <div className="tb-app">
             <main className="tb-main">
                 {id !== "" &&
-                    <div className="tb-toolbar">
-                        <span className="tb-chip tb-chip--gold">
-                            <span className="tb-chip__dot" aria-hidden="true" />
-                            Ticket {id}
-                        </span>
-                        {player &&
-                            <span className="tb-chip">
-                                {player.employeeCode}{player.name ? ` · ${player.name}` : ""}
+                    <div className="tb-toolbar" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div>
+                            <span className="tb-chip tb-chip--gold">
+                                <span className="tb-chip__dot" aria-hidden="true" />
+                                Ticket {id}
                             </span>
-                        }
+                            {player &&
+                                <span className="tb-chip">
+                                    {player.employeeCode}{player.name ? ` · ${player.name}` : ""}
+                                </span>
+                            }
+                        </div>
+                        <div>
+                            <span className="tb-chip">
+                               Created by <span className="tb-footer__name">Avinash Mane</span>
+                            </span>
+                        </div>
                     </div>
+               
                 }
                 {id === "" && !needsName &&
                     <section className="tb-panel tb-gate">
