@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { collection, getDocs } from "firebase/firestore"
 import { fireStore } from "../firebase";
+import { addWinner } from "../winners";
 
 const wins = [
     "Early 5",
@@ -22,15 +23,21 @@ const tints = {
     yellow: "#a08a43"
 }
 
-function VerifyCard({ openDialog, setOpenDialog, list }) {
-    const [id, setId] = useState()
+function VerifyCard({ openDialog, setOpenDialog, list, onWinnerAdded }) {
+    const [id, setId] = useState("")
     const [color, setColor] = useState("red")
+    const [category, setCategory] = useState("")
+    const [claimError, setClaimError] = useState("")
+    const [isSaving, setIsSaving] = useState(false)
     const ticketCollectionRef = collection(fireStore, "tickets")
     const [onlineCards, setOnlineCards] = useState({})
     const [selectedCard, setSelectedCard] = useState([])
 
     const onCloseDialog = () => {
         setSelectedCard([])
+        setId("")
+        setCategory("")
+        setClaimError("")
         setOpenDialog(false)
     }
 
@@ -52,6 +59,30 @@ function VerifyCard({ openDialog, setOpenDialog, list }) {
     }, [id, color])
 
     const changeColor = (e) => setColor(e.target.value)
+
+    const saveWinner = async () => {
+        setClaimError("")
+        if (!selectedCard?._entries) {
+            setClaimError("Enter a valid ticket before submitting a winner")
+            return
+        }
+        if (!category) {
+            setClaimError("Select a win category")
+            return
+        }
+
+        setIsSaving(true)
+        try {
+            const winner = await addWinner({ ticketId: id, color, category })
+            if (onWinnerAdded) onWinnerAdded(winner)
+            setCategory("")
+            onCloseDialog()
+        } catch (err) {
+            setClaimError(err.message || "Could not save this winner")
+        } finally {
+            setIsSaving(false)
+        }
+    }
 
     const markedCount = selectedCard?._entries
         ? selectedCard._entries.flat().filter(col => col && list.includes(col)).length
@@ -81,6 +112,7 @@ function VerifyCard({ openDialog, setOpenDialog, list }) {
                             id="verify-card-id"
                             className="tb-input"
                             placeholder="e.g. 4"
+                            value={id}
                             onChange={(e) => setId(e.target.value)}
                             type="number" />
                     </div>
@@ -91,9 +123,25 @@ function VerifyCard({ openDialog, setOpenDialog, list }) {
                                 <option key={c} value={c} style={{ background: c }}>{c}</option>)}
                         </select>
                     </div>
+                    <div className="tb-field">
+                        <label className="tb-label" htmlFor="verify-win-category">Win category</label>
+                        <select
+                            id="verify-win-category"
+                            value={category}
+                            onChange={(e) => setCategory(e.target.value)}
+                            className="tb-select">
+                            <option value="">Select category</option>
+                            {wins.map(win => <option key={win} value={win}>{win}</option>)}
+                        </select>
+                    </div>
                 </div>
 
                 <div className="tb-dialog__body">
+                    {claimError &&
+                        <div className="tb-notice">
+                            <strong>{claimError}</strong>
+                        </div>
+                    }
                     {id !== "" && onlineCards.players != 0 && (parseInt(id) > onlineCards.players || id <= 0) ?
                         <div className="tb-notice">
                             <strong>Card not found</strong>
@@ -129,6 +177,13 @@ function VerifyCard({ openDialog, setOpenDialog, list }) {
                 <div className="tb-dialog__foot">
                     <button type="button" className="tb-btn tb-btn--ghost tb-btn--sm" onClick={onCloseDialog}>
                         Close
+                    </button>
+                    <button
+                        type="button"
+                        className="tb-btn tb-btn--gold tb-btn--sm"
+                        onClick={saveWinner}
+                        disabled={isSaving || !selectedCard?._entries}>
+                        {isSaving ? "Saving…" : "Submit winner"}
                     </button>
                 </div>
             </div>

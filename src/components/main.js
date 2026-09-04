@@ -5,6 +5,7 @@ import sound from "../assets/spin.mp3"
 import VerifyCard from "./VerifyCard";
 import PlayCardQr from "./PlayCardQr";
 import Footer from "./Footer";
+import { listWinners } from "../winners";
 const wins = [
   "Early 5",
   "Top Line",
@@ -16,6 +17,18 @@ const wins = [
 
 const TOTAL_NUMBERS = 90
 
+const CONFETTI_COLORS = ["#f0b429", "#ffffff", "#7fd1b9", "#f2836b", "#9db4ff"]
+
+// Pre-computed so every falling piece keeps a stable column, speed and drift.
+const CONFETTI = Array.from({ length: 30 }, (_, index) => ({
+  "--piece-left": `${(index * 3.37) % 100}%`,
+  "--piece-drift": `${(index % 2 ? 1 : -1) * (2 + (index % 5))}vw`,
+  "--piece-rotate": `${(2 + (index % 4)) * 180}deg`,
+  "--piece-delay": `${((index * 43) % 120) / 60}s`,
+  "--piece-duration": `${2.4 + ((index * 17) % 18) / 10}s`,
+  "--piece-color": CONFETTI_COLORS[index % CONFETTI_COLORS.length]
+}))
+
 function App() {
   const [list, setList] = useState([]);
   const [isWating, setIsWating] = useState(false);
@@ -24,9 +37,21 @@ function App() {
   const history = useHistory();
   const [openDialog, setOpenDialog] = useState(false)
   const [openPlayCard, setOpenPlayCard] = useState(false)
+  const [claimedWins, setClaimedWins] = useState({})
+  const [winnerPopup, setWinnerPopup] = useState(null)
 
   const onOpenDialog = () => setOpenDialog(true)
 
+  const onWinnerAdded = (winner) => {
+    setClaimedWins(current => ({ ...current, [winner.category]: true }))
+    setWinnerPopup(winner)
+  }
+
+  useEffect(() => {
+    if (!winnerPopup) return undefined
+    const timeoutId = setTimeout(() => setWinnerPopup(null), 5000)
+    return () => clearTimeout(timeoutId)
+  }, [winnerPopup])
 
   useEffect(() => {
     if (list.length) localStorage.setItem("numbers", JSON.stringify(list))
@@ -35,6 +60,21 @@ function App() {
   useEffect(() => {
     let stoaredList = JSON.parse(localStorage.getItem("numbers"))
     if (stoaredList) setList(stoaredList)
+  }, [])
+
+  useEffect(() => {
+    const loadWinnerCategories = async () => {
+      try {
+        const savedWinners = await listWinners()
+        setClaimedWins(savedWinners.reduce((categories, winner) => ({
+          ...categories,
+          [winner.category]: true
+        }), {}))
+      } catch (err) {
+        // Winner history should never prevent the caller board from loading.
+      }
+    }
+    loadWinnerCategories()
   }, [])
 
   const handleOnReset = () => {
@@ -105,8 +145,8 @@ function App() {
               <Button variant="" className="tb-btn tb-btn--ghost tb-btn--sm" onClick={handleOnReset}>
                 Reset
               </Button>
-              <Button variant="" className="tb-btn tb-btn--ghost tb-btn--sm" onClick={() => history.push("/tickets")}>
-                Generate Tickets
+              <Button variant="" className="tb-btn tb-btn--ghost tb-btn--sm" onClick={() => history.push("/admin_section")}>
+                Admin Section
               </Button>
               <Button variant="" className="tb-btn tb-btn--gold tb-btn--sm" onClick={() => setOpenPlayCard(true)}>
                 Play Card
@@ -186,7 +226,12 @@ function App() {
                     key={label}
                     id={`claim-${index}`}
                     className="tb-claim"
-                    label={label.trim()} />
+                    label={label.trim()}
+                    checked={!!claimedWins[label]}
+                    onChange={(event) => setClaimedWins(current => ({
+                      ...current,
+                      [label]: event.target.checked
+                    }))} />
                 )}
               </div>
             </section>
@@ -202,7 +247,42 @@ function App() {
           </section>
         </div>
       </main>
-      <VerifyCard openDialog={openDialog} setOpenDialog={setOpenDialog} list={list} />
+      {winnerPopup &&
+        <div
+          className="tb-winner-overlay"
+          role="status"
+          aria-live="polite"
+          onClick={() => setWinnerPopup(null)}>
+          <div className="tb-winner-rain" aria-hidden="true">
+            {CONFETTI.map((piece, index) => (
+              <span key={index} style={piece} />
+            ))}
+          </div>
+
+          <div className="tb-winner-pop" onClick={(event) => event.stopPropagation()}>
+            <button
+              type="button"
+              className="tb-winner-pop__close"
+              aria-label="Close winner announcement"
+              onClick={() => setWinnerPopup(null)}>
+              &#10005;
+            </button>
+            <div className="tb-winner-pop__flowers" aria-hidden="true">
+              <span>🌸</span><span>🌼</span><span>🌸</span>
+            </div>
+            <span className="tb-winner-pop__eyebrow">Winner announced</span>
+            <strong>{winnerPopup.name || winnerPopup.employeeCode}</strong>
+            <span className="tb-winner-pop__category">{winnerPopup.category}</span>
+            <small>Ticket {winnerPopup.ticketId} · {winnerPopup.color}</small>
+          </div>
+        </div>
+      }
+      <VerifyCard
+        openDialog={openDialog}
+        setOpenDialog={setOpenDialog}
+        list={list}
+        onWinnerAdded={onWinnerAdded}
+      />
       <PlayCardQr openDialog={openPlayCard} setOpenDialog={setOpenPlayCard} />
     </div>
   );

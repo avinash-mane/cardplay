@@ -18,6 +18,26 @@ const tints = {
 let rows = ["top", "middle", "bottom"]
 const init = { all: 0, top: 0, bottom: 0, middle: 0, corner: 0 }
 
+const blankCard = () => [...Array(3)].map(() => Array(9).fill(null))
+const marksKey = (ticketId) => `tb-marks-${ticketId}`
+
+// Marks survive an accidental refresh, but only when the saved shape still
+// matches the ticket that is being opened.
+const readMarks = (ticketId, sets) => {
+    try {
+        const saved = JSON.parse(localStorage.getItem(marksKey(ticketId)))
+        if (!saved) return null
+        const { marks, counts } = saved
+        const shapeOk = Array.isArray(marks) && marks.length === sets &&
+            marks.every(card => Array.isArray(card) && card.length === 3 &&
+                card.every(row => Array.isArray(row) && row.length === 9)) &&
+            Array.isArray(counts) && counts.length === sets
+        return shapeOk ? { marks, counts } : null
+    } catch (err) {
+        return null
+    }
+}
+
 function PlayCard() {
     const [list, setList] = useState([]);
     const [sets, setSets] = useState(1);
@@ -83,8 +103,9 @@ function PlayCard() {
 
     useEffect(() => {
         if (list.length > 0 && sets && parseInt(id) <= players && parseInt(id) > 0) {
-            setMyCount([...Array(sets)].map(e => ({ ...init })))
-            setMyCard([...Array(sets)].map(e => [...Array(3)].map(e => Array(9).fill(null))))
+            const saved = readMarks(id, sets)
+            setMyCount(saved ? saved.counts : [...Array(sets)].map(e => ({ ...init })))
+            setMyCard(saved ? saved.marks : [...Array(sets)].map(e => blankCard()))
             let ar = []
             let start = (parseInt(id) - 1) * sets;
             for (let i = start; i < parseInt(id) * sets; i++) {
@@ -95,6 +116,11 @@ function PlayCard() {
         }
 
     }, [id, list, players, sets])
+
+    useEffect(() => {
+        if (!id || !sets || myCount.length !== sets) return
+        localStorage.setItem(marksKey(id), JSON.stringify({ marks: myCard, counts: myCount }))
+    }, [id, sets, myCard, myCount])
 
     const openAssignment = (record) => {
         setPlayer(record)
@@ -143,7 +169,7 @@ function PlayCard() {
     const onClick = (cardIndex, rowindex, colindex, col) => {
         if (col != 0) {
             let arr = [...myCard]
-            let count = { ...myCount }
+            let count = [...myCount]
             if (arr[cardIndex][rowindex][colindex] === null) {
                 arr[cardIndex][rowindex][colindex] = col
                 count[cardIndex].all = myCount[cardIndex].all + 1
@@ -169,6 +195,13 @@ function PlayCard() {
                 audio.play()
             }
         }
+    }
+
+    const onResetCard = (cardIndex, color) => {
+        if (!window.confirm(`Clear every marked number on your ${color} card?`)) return
+        setMyCard(current => current.map((card, index) => index === cardIndex ? blankCard() : card))
+        setMyCount(current => current.map((count, index) => index === cardIndex ? { ...init } : count))
+        setShowGIF(null)
     }
 
     const claimRows = (count) => ([
@@ -293,7 +326,17 @@ function PlayCard() {
                                     <div className="tb-ticket tb-ticket--play" style={{ "--ticket-accent": tints[color] || color }}>
                                         <div className="tb-ticket__head">
                                             <span className="tb-ticket__id">Ticket {id}</span>
-                                            <span className="tb-ticket__tag">{color}</span>
+                                            <span className="tb-ticket__head-end">
+                                                <button
+                                                    type="button"
+                                                    className="tb-ticket__reset"
+                                                    title={`Reset ${color} card`}
+                                                    aria-label={`Reset ${color} card`}
+                                                    onClick={() => onResetCard(cardindex, color)}>
+                                                    &#8635;
+                                                </button>
+                                                <span className="tb-ticket__tag">{color}</span>
+                                            </span>
                                         </div>
                                         <div className="tb-ticket__grid">
                                             {card._entries.map((row, rowindex) =>

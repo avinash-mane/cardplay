@@ -449,6 +449,43 @@
   color: #1c2340;
 }
 
+.tb-ticket__head-end {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.tb-ticket__reset {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  font-size: 0.95rem;
+  line-height: 1;
+  color: var(--tb-text-soft);
+  background: var(--tb-surface-strong);
+  border: 1px solid var(--tb-border);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color 180ms var(--tb-ease), background 180ms var(--tb-ease),
+    border-color 180ms var(--tb-ease);
+}
+
+@media (hover: hover) {
+  .tb-ticket__reset:hover {
+    color: var(--tb-ink);
+    background: var(--tb-gold);
+    border-color: var(--tb-gold-deep);
+  }
+}
+
+.tb-ticket__reset:focus-visible {
+  outline: none;
+  box-shadow: var(--tb-ring);
+}
+
 .tb-ticket__tag {
   display: inline-flex;
   align-items: center;
@@ -985,5 +1022,262 @@
   to {
     opacity: 1;
     transform: none;
+  }
+}
+
+/* ---------------------------------------------------------
+   Winner records and announcement
+   --------------------------------------------------------- */
+
+.tb-admin-title {
+  margin: 0;
+  font-family: var(--tb-font-display);
+  font-size: clamp(1.05rem, 3vw, 1.4rem);
+  font-weight: 700;
+  color: var(--tb-text);
+}
+
+.tb-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding: 0.35rem;
+  margin-bottom: clamp(0.85rem, 2vw, 1.4rem);
+  background: var(--tb-surface);
+  border: 1px solid var(--tb-border);
+  border-radius: var(--tb-radius);
+}
+
+.tb-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  flex: 1 1 8rem;
+  min-height: 44px;
+  padding: 0.5rem 0.95rem;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--tb-text-soft);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--tb-radius-sm);
+  cursor: pointer;
+  transition: background 180ms var(--tb-ease), color 180ms var(--tb-ease),
+    border-color 180ms var(--tb-ease);
+}
+
+@media (hover: hover) {
+  .tb-tab:hover:not(.is-active) {
+    color: var(--tb-text);
+    background: var(--tb-surface-strong);
+  }
+}
+
+.tb-tab:focus-visible {
+  outline: none;
+  box-shadow: var(--tb-ring);
+}
+
+.tb-tab.is-active {
+  color: var(--tb-ink);
+  background: var(--tb-gold);
+  border-color: var(--tb-gold-deep);
+  box-shadow: var(--tb-shadow-sm);
+}
+
+.tb-tab__count {
+  min-width: 1.5rem;
+  padding: 0.08rem 0.42rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--tb-text-dim);
+  background: var(--tb-surface-strong);
+  border-radius: 999px;
+}
+
+.tb-tab.is-active .tb-tab__count {
+  color: var(--tb-ink);
+  background: rgba(20, 24, 31, 0.16);
+}
+
+/* Keeps inactive tab panels collapsed even when a class sets display. */
+[hidden] {
+  display: none !important;
+}
+
+.tb-assign-table-wrap {
+  width: 100%;
+  margin-top: 0.8rem;
+  overflow-x: auto;
+}
+
+.tb-assignment-notice {
+  margin-top: 0.85rem;
+}
+
+.tb-winners-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.8rem;
+}
+
+.tb-winners-notice {
+  margin-bottom: 0.8rem;
+}
+
+.tb-winners-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.tb-winner-set {
+  text-transform: capitalize;
+}
+
+.tb-winner-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  overflow: hidden;
+  background: rgba(4, 6, 16, 0.74);
+  animation: tb-fade-in 0.2s var(--tb-ease);
+}
+
+.tb-winner-pop {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  justify-items: center;
+  width: min(100%, 620px);
+  padding: clamp(1.9rem, 5vw, 3.1rem) clamp(1.5rem, 4vw, 3rem);
+  text-align: center;
+  color: var(--tb-text);
+  background: var(--tb-surface-solid);
+  border: 1px solid rgba(240, 180, 41, 0.5);
+  border-radius: var(--tb-radius-lg);
+  box-shadow: var(--tb-shadow-lg);
+  animation: tb-winner-in 0.35s var(--tb-ease);
+}
+
+.tb-winner-pop__close {
+  position: absolute;
+  top: 0.65rem;
+  right: 0.65rem;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  color: var(--tb-text-dim);
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.tb-winner-pop__close:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.tb-winner-pop__flowers {
+  display: flex;
+  gap: 0.7rem;
+  margin-bottom: 0.7rem;
+  font-size: clamp(2rem, 6vw, 2.9rem);
+}
+
+.tb-winner-pop__flowers span:nth-child(2) {
+  transform: translateY(-0.35rem) scale(1.15);
+}
+
+.tb-winner-pop__eyebrow {
+  margin-bottom: 0.5rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--tb-gold);
+}
+
+.tb-winner-pop strong {
+  font-family: var(--tb-font-display);
+  font-size: clamp(2rem, 7vw, 3.3rem);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.tb-winner-pop__category {
+  margin-top: 0.55rem;
+  font-size: clamp(1.1rem, 3.4vw, 1.5rem);
+  font-weight: 700;
+  color: var(--tb-gold);
+}
+
+.tb-winner-pop small {
+  margin-top: 0.7rem;
+  font-size: 0.95rem;
+  color: var(--tb-text-dim);
+  text-transform: capitalize;
+}
+
+@keyframes tb-winner-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* confetti raining down over the announcement */
+.tb-winner-rain {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.tb-winner-rain span {
+  position: absolute;
+  top: -8vh;
+  left: var(--piece-left);
+  width: 9px;
+  height: 15px;
+  border-radius: 2px;
+  background: var(--piece-color);
+  opacity: 0;
+  animation: tb-winner-rain var(--piece-duration) linear var(--piece-delay) infinite;
+}
+
+@keyframes tb-winner-rain {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) rotate(0deg);
+  }
+  12% {
+    opacity: 1;
+  }
+  88% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--piece-drift), 116vh) rotate(var(--piece-rotate));
+  }
+}
+
+@media (max-width: 640px) {
+  .tb-winners-table {
+    min-width: 760px;
   }
 }

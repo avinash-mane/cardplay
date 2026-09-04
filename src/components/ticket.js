@@ -5,6 +5,7 @@ import { useHistory } from 'react-router-dom';
 import { updateDoc, doc } from "firebase/firestore"
 import { fireStore } from "../firebase";
 import { claimTicket, listAssignments, normalizeEmployeeCode, removeAssignment } from "../assignments";
+import { listWinners } from "../winners";
 
 const constSets = [1, 2, 3, 4, 5, 6];
 const colors = ["red", "green", "blue", "purple", "orange", "yellow"]
@@ -33,6 +34,10 @@ function Ticket() {
     const [isAssigning, setIsAssigning] = useState(false)
     const [isLoadingAssign, setIsLoadingAssign] = useState(false)
     const [deletingCode, setDeletingCode] = useState("")
+    const [winners, setWinners] = useState([])
+    const [winnerError, setWinnerError] = useState("")
+    const [isLoadingWinners, setIsLoadingWinners] = useState(false)
+    const [activeTab, setActiveTab] = useState("generate")
 
     const history = useHistory()
 
@@ -50,8 +55,21 @@ function Ticket() {
         }
     }
 
+    const refreshWinners = async () => {
+        setIsLoadingWinners(true)
+        setWinnerError("")
+        try {
+            setWinners(await listWinners())
+        } catch (err) {
+            setWinnerError(err.message || "Could not load winners")
+        } finally {
+            setIsLoadingWinners(false)
+        }
+    }
+
     useEffect(() => {
         refreshAssignments()
+        refreshWinners()
     }, [])
 
     const onManualAssign = async (event) => {
@@ -170,6 +188,58 @@ function Ticket() {
         URL.revokeObjectURL(url)
     }
 
+    const downloadWinnersExcel = () => {
+        if (!winners.length) {
+            setWinnerError("No winners to download yet")
+            return
+        }
+
+        const escapeXml = (value) => String(value ?? "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+
+        const rowsXml = winners.map(row => `
+            <Row>
+                <Cell><Data ss:Type="Number">${row.ticketId}</Data></Cell>
+                <Cell><Data ss:Type="String">${escapeXml(row.employeeCode)}</Data></Cell>
+                <Cell><Data ss:Type="String">${escapeXml(row.name)}</Data></Cell>
+                <Cell><Data ss:Type="String">${escapeXml(row.category)}</Data></Cell>
+                <Cell><Data ss:Type="String">${escapeXml(row.color)}</Data></Cell>
+                <Cell><Data ss:Type="String">${escapeXml(row.wonAt)}</Data></Cell>
+            </Row>`).join("")
+
+        const xml = `<?xml version="1.0"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+  <Worksheet ss:Name="Winners">
+    <Table>
+      <Row>
+        <Cell><Data ss:Type="String">Ticket</Data></Cell>
+        <Cell><Data ss:Type="String">Employee ID</Data></Cell>
+        <Cell><Data ss:Type="String">Name</Data></Cell>
+        <Cell><Data ss:Type="String">Category</Data></Cell>
+        <Cell><Data ss:Type="String">Set</Data></Cell>
+        <Cell><Data ss:Type="String">Won At</Data></Cell>
+      </Row>
+      ${rowsXml}
+    </Table>
+  </Worksheet>
+</Workbook>`
+
+        const blob = new Blob([xml], { type: "application/vnd.ms-excel" })
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement("a")
+        link.href = url
+        link.download = `tambola-winners-${new Date().toISOString().slice(0, 10)}.xls`
+        document.body.appendChild(link)
+        link.click()
+        link.remove()
+        URL.revokeObjectURL(url)
+    }
+
     const updateTickets = async () => {
         if (password === process.env.REACT_APP_ADMIN_PASSWORD) {
             const ticketDoc = doc(fireStore, "tickets", "tickets")
@@ -177,12 +247,14 @@ function Ticket() {
                 list: JSON.stringify(list),
                 players: parseInt(player),
                 sets: sets,
-                assigned_list: ""
+                assigned_list: "",
+                winners: ""
             }
             await updateDoc(ticketDoc, data)
             alert("tickets uploaded successfully")
             setOpenField(false)
             refreshAssignments()
+            refreshWinners()
         } else {
             alert("password mismatch")
         }
@@ -227,6 +299,12 @@ function Ticket() {
 
     const tempCard = Card();
 
+    const tabs = [
+        { id: "generate", label: "Generate tickets", count: list.length },
+        { id: "assigned", label: "Assigned list", count: assignments.length },
+        { id: "winners", label: "Winner list", count: winners.length }
+    ]
+
     return (
         <div className="tb-app">
             <main className="tb-main">
@@ -234,12 +312,37 @@ function Ticket() {
                     <Button variant="" className="tb-btn tb-btn--ghost tb-btn--sm" onClick={() => history.push("/")}>
                         &#8592; Home
                     </Button>
-                    {list.length > 0 &&
+                    <h1 className="tb-admin-title">Admin section</h1>
+                    <span className="tb-toolbar__spacer" />
+                    {activeTab === "generate" && list.length > 0 &&
                         <Button variant="" className="tb-btn tb-btn--gold tb-btn--sm" onClick={() => setOpenField(v => !v)}>
                             Upload Tickets
                         </Button>
                     }
                 </div>
+
+                <div className="tb-tabs" role="tablist" aria-label="Admin sections">
+                    {tabs.map(tab =>
+                        <button
+                            key={tab.id}
+                            type="button"
+                            role="tab"
+                            id={`tb-tab-${tab.id}`}
+                            aria-controls={`tb-tabpanel-${tab.id}`}
+                            aria-selected={activeTab === tab.id}
+                            className={`tb-tab ${activeTab === tab.id ? "is-active" : ""}`}
+                            onClick={() => setActiveTab(tab.id)}>
+                            {tab.label}
+                            <span className="tb-tab__count">{tab.count}</span>
+                        </button>
+                    )}
+                </div>
+
+                <div
+                    id="tb-tabpanel-generate"
+                    role="tabpanel"
+                    aria-labelledby="tb-tab-generate"
+                    hidden={activeTab !== "generate"}>
                 {!list.length ?
                     <section className="tb-panel tb-gate">
                         <h2 className="tb-gate__title">Set up the game</h2>
@@ -306,8 +409,79 @@ function Ticket() {
                         </div>
                     </div>
                 }
+                </div>
 
-                <section className="tb-panel" style={{ marginTop: "1.2rem" }} aria-label="Assigned tickets">
+                <div
+                    id="tb-tabpanel-winners"
+                    role="tabpanel"
+                    aria-labelledby="tb-tab-winners"
+                    hidden={activeTab !== "winners"}>
+                <section className="tb-panel" aria-label="Winners">
+                    <div className="tb-panel__head">
+                        <h2 className="tb-panel__title">Winners</h2>
+                        <span className="tb-chip">{winners.length} recorded</span>
+                    </div>
+                    <div className="tb-winners-actions">
+                        <Button
+                            variant=""
+                            className="tb-btn tb-btn--ghost tb-btn--sm"
+                            onClick={refreshWinners}
+                            disabled={isLoadingWinners}>
+                            {isLoadingWinners ? "Refreshing…" : "Refresh"}
+                        </Button>
+                        <Button
+                            variant=""
+                            className="tb-btn tb-btn--gold tb-btn--sm"
+                            onClick={downloadWinnersExcel}
+                            disabled={!winners.length}>
+                            Download winners Excel
+                        </Button>
+                    </div>
+
+                    {winnerError &&
+                        <div className="tb-notice tb-winners-notice">
+                            <strong>{winnerError}</strong>
+                        </div>
+                    }
+
+                    {winners.length ?
+                        <div className="tb-winners-table-wrap">
+                            <table className="tb-assign-table tb-winners-table">
+                                <thead>
+                                    <tr>
+                                        <th>Ticket</th>
+                                        <th>Employee id</th>
+                                        <th>Name</th>
+                                        <th>Category</th>
+                                        <th>Set</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {winners.map((winner, index) =>
+                                        <tr key={`${winner.ticketId}-${winner.color}-${winner.category}-${index}`}>
+                                            <td>{winner.ticketId}</td>
+                                            <td>{winner.employeeCode || "—"}</td>
+                                            <td>{winner.name || "—"}</td>
+                                            <td>{winner.category}</td>
+                                            <td className="tb-winner-set">{winner.color}</td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div> :
+                        <p className="tb-assign-empty">
+                            {isLoadingWinners ? "Loading…" : "No winners have been recorded yet."}
+                        </p>
+                    }
+                </section>
+                </div>
+
+                <div
+                    id="tb-tabpanel-assigned"
+                    role="tabpanel"
+                    aria-labelledby="tb-tab-assigned"
+                    hidden={activeTab !== "assigned"}>
+                <section className="tb-panel" aria-label="Assigned tickets">
                     <div className="tb-panel__head">
                         <h2 className="tb-panel__title">Assigned tickets</h2>
                         <span className="tb-chip">
@@ -315,7 +489,7 @@ function Ticket() {
                             {remaining ? ` · ${remaining} left` : ""}
                         </span>
                     </div>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginBottom: "0.4rem" }}>
+                    <div className="tb-winners-actions">
                     <Button
                         variant=""
                         className="tb-btn tb-btn--ghost tb-btn--sm"
@@ -333,7 +507,7 @@ function Ticket() {
                     </div>
 
                     {assignments.length ?
-                        <div style={{ overflowX: "auto", marginTop: "0.8rem" }}>
+                        <div className="tb-assign-table-wrap">
                             <table className="tb-assign-table">
                                 <thead>
                                     <tr>
@@ -401,7 +575,7 @@ function Ticket() {
                         </Button>
                     </form>
                     {assignError &&
-                        <div className="tb-notice" style={{ marginTop: "0.85rem" }}>
+                        <div className="tb-notice tb-assignment-notice">
                             <strong>{assignError}</strong>
                         </div>
                     }
@@ -409,6 +583,7 @@ function Ticket() {
                         <p className="tb-assign-empty">{assignNotice}</p>
                     }
                 </section>
+                </div>
             </main>
         </div>
     );
