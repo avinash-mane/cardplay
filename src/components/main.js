@@ -11,7 +11,7 @@ const wins = [
   "Middle Line",
   "Bottom Line",
   "Four Corners",
-  "Full House 1"
+  "Full House"
 ]
 
 const TOTAL_NUMBERS = 90

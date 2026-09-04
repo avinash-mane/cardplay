@@ -8,8 +8,7 @@ const wins = [
     "Middle Line",
     "Bottom Line",
     "Four Corners",
-    "Full House 1",
-    " Full House 2"
+    "Full House",
 ]
 
 const constSets = [1, 2, 3, 4, 5, 6];

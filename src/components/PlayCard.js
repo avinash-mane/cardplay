@@ -177,7 +177,7 @@ function PlayCard() {
         { label: "Middle Line", done: count.middle == 5 },
         { label: "Bottom Line", done: count.bottom == 5 },
         { label: "Four Corners", done: count.corner == 4 },
-        { label: "Full House 1", done: count.all == 15 }
+        { label: "Full House", done: count.all == 15 }
     ])
 
     return (
