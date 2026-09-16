@@ -109,3 +109,17 @@ export async function addWinner({ ticketId, color, category }) {
         return record
     })
 }
+
+export async function resetWinners() {
+    const ticketsRef = (await getTicketsSnapshot()).ref
+
+    return runTransaction(fireStore, async (transaction) => {
+        const snapshot = await transaction.get(ticketsRef)
+        if (!snapshot.exists()) throw new Error("Tickets are not ready yet")
+
+        const { asString } = readRows(snapshot.data()[WINNERS_FIELD])
+        transaction.update(ticketsRef, {
+            [WINNERS_FIELD]: asString ? "[]" : []
+        })
+    })
+}

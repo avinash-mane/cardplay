@@ -2,15 +2,7 @@ import React, { useEffect, useState } from "react";
 import { collection, getDocs } from "firebase/firestore"
 import { fireStore } from "../firebase";
 import { addWinner } from "../winners";
-
-const wins = [
-    "Early 5",
-    "Top Line",
-    "Middle Line",
-    "Bottom Line",
-    "Four Corners",
-    "Full House",
-]
+import { CLAIM_OPTIONS, parseClaimOptions } from "../claims";
 
 const constSets = [1, 2, 3, 4, 5, 6];
 const colors = ["red", "green", "blue", "purple", "orange", "yellow"]
@@ -32,6 +24,7 @@ function VerifyCard({ openDialog, setOpenDialog, list, onWinnerAdded }) {
     const ticketCollectionRef = collection(fireStore, "tickets")
     const [onlineCards, setOnlineCards] = useState({})
     const [selectedCard, setSelectedCard] = useState([])
+    const [wins, setWins] = useState(() => CLAIM_OPTIONS.map(option => option.label))
 
     const onCloseDialog = () => {
         setSelectedCard([])
@@ -42,13 +35,15 @@ function VerifyCard({ openDialog, setOpenDialog, list, onWinnerAdded }) {
     }
 
     useEffect(() => {
+        if (!openDialog) return undefined
         const getTickets = async () => {
             let data = await getDocs(ticketCollectionRef)
             data = data.docs[0].data()
             setOnlineCards({ list: JSON.parse(data.list), sets: data.sets, players: data.players })
+            setWins(parseClaimOptions(data.options))
         }
         getTickets()
-    }, [])
+    }, [openDialog])
 
     useEffect(() => {
         if (id && color) {
@@ -57,6 +52,10 @@ function VerifyCard({ openDialog, setOpenDialog, list, onWinnerAdded }) {
             setSelectedCard(onlineCards.list[a + b])
         }
     }, [id, color])
+
+    useEffect(() => {
+        if (category && !wins.includes(category)) setCategory("")
+    }, [category, wins])
 
     const changeColor = (e) => setColor(e.target.value)
 

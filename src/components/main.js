@@ -6,14 +6,7 @@ import VerifyCard from "./VerifyCard";
 import PlayCardQr from "./PlayCardQr";
 import Footer from "./Footer";
 import { listWinners } from "../winners";
-const wins = [
-  "Early 5",
-  "Top Line",
-  "Middle Line",
-  "Bottom Line",
-  "Four Corners",
-  "Full House"
-]
+import { CLAIM_OPTIONS, listClaimOptions } from "../claims";
 
 const TOTAL_NUMBERS = 90
 
@@ -39,6 +32,7 @@ function App() {
   const [openPlayCard, setOpenPlayCard] = useState(false)
   const [claimedWins, setClaimedWins] = useState({})
   const [winnerPopup, setWinnerPopup] = useState(null)
+  const [wins, setWins] = useState(() => CLAIM_OPTIONS.map(option => option.label))
 
   const onOpenDialog = () => setOpenDialog(true)
 
@@ -74,7 +68,15 @@ function App() {
         // Winner history should never prevent the caller board from loading.
       }
     }
+    const loadClaimOptions = async () => {
+      try {
+        setWins(await listClaimOptions())
+      } catch (err) {
+        // Keep the default claim list if settings have not been saved yet.
+      }
+    }
     loadWinnerCategories()
+    loadClaimOptions()
   }, [])
 
   const handleOnReset = () => {
@@ -216,6 +218,7 @@ function App() {
               </div>
             </section>
 
+            {wins.length > 0 &&
             <section className="tb-panel" aria-label="Claims">
               <div className="tb-panel__head">
                 <h2 className="tb-panel__title">Claims</h2>
@@ -235,6 +238,7 @@ function App() {
                 )}
               </div>
             </section>
+            }
 
             <Footer />
 

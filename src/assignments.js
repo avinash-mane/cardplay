@@ -147,3 +147,17 @@ export async function removeAssignment(employeeCode) {
         return toRecord(match, code)
     })
 }
+
+export async function resetAssignments() {
+    const ticketsRef = (await getTicketsSnapshot()).ref
+
+    return runTransaction(fireStore, async (transaction) => {
+        const snapshot = await transaction.get(ticketsRef)
+        if (!snapshot.exists()) throw new Error("Tickets are not ready yet")
+
+        const { asString } = readAssigned(snapshot.data())
+        transaction.update(ticketsRef, {
+            [ASSIGNED_FIELD]: asString ? "[]" : []
+        })
+    })
+}

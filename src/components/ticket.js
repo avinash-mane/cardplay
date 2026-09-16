@@ -4,8 +4,9 @@ import tamblo from "tambola-generator"
 import { useHistory } from 'react-router-dom';
 import { updateDoc, doc } from "firebase/firestore"
 import { fireStore } from "../firebase";
-import { claimTicket, listAssignments, normalizeEmployeeCode, removeAssignment } from "../assignments";
-import { listWinners } from "../winners";
+import { claimTicket, listAssignments, normalizeEmployeeCode, removeAssignment, resetAssignments } from "../assignments";
+import { listWinners, resetWinners } from "../winners";
+import { CLAIM_OPTIONS, listClaimOptions, saveClaimOptions } from "../claims";
 
 const constSets = [1, 2, 3, 4, 5, 6];
 const colors = ["red", "green", "blue", "purple", "orange", "yellow"]
@@ -37,7 +38,14 @@ function Ticket() {
     const [winners, setWinners] = useState([])
     const [winnerError, setWinnerError] = useState("")
     const [isLoadingWinners, setIsLoadingWinners] = useState(false)
-    const [activeTab, setActiveTab] = useState("generate")
+    const [isResettingWinners, setIsResettingWinners] = useState(false)
+    const [isResettingAssignments, setIsResettingAssignments] = useState(false)
+    const [enabledClaims, setEnabledClaims] = useState(() => CLAIM_OPTIONS.map(option => option.label))
+    const [savedClaims, setSavedClaims] = useState(() => CLAIM_OPTIONS.map(option => option.label))
+    const [optionsError, setOptionsError] = useState("")
+    const [optionsNotice, setOptionsNotice] = useState("")
+    const [isSavingOptions, setIsSavingOptions] = useState(false)
+    const [activeTab, setActiveTab] = useState("winners")
 
     const history = useHistory()
 
@@ -67,9 +75,50 @@ function Ticket() {
         }
     }
 
+    const refreshClaimOptions = async () => {
+        setOptionsError("")
+        try {
+            const loaded = await listClaimOptions()
+            setEnabledClaims(loaded)
+            setSavedClaims(loaded)
+        } catch (err) {
+            setOptionsError(err.message || "Could not load claim options")
+        }
+    }
+
+    const onToggleClaim = (label) => {
+        setOptionsError("")
+        setOptionsNotice("")
+        setEnabledClaims(current => CLAIM_OPTIONS
+            .map(option => option.label)
+            .filter(item => item === label ? !current.includes(item) : current.includes(item)))
+    }
+
+    const claimsUnchanged = enabledClaims.length === savedClaims.length &&
+        enabledClaims.every(label => savedClaims.includes(label))
+
+    const onUpdateClaimOptions = async () => {
+        if (claimsUnchanged) return
+
+        setOptionsError("")
+        setOptionsNotice("")
+        setIsSavingOptions(true)
+        try {
+            const saved = await saveClaimOptions(enabledClaims)
+            setEnabledClaims(saved)
+            setSavedClaims(saved)
+            setOptionsNotice("Claim options updated")
+        } catch (err) {
+            setOptionsError(err.message || "Could not save claim options")
+        } finally {
+            setIsSavingOptions(false)
+        }
+    }
+
     useEffect(() => {
         refreshAssignments()
         refreshWinners()
+        refreshClaimOptions()
     }, [])
 
     const onManualAssign = async (event) => {
@@ -138,6 +187,44 @@ function Ticket() {
             setAssignError(err.message || "Could not remove that assignment")
         } finally {
             setDeletingCode("")
+        }
+    }
+
+    const onResetWinners = async () => {
+        const confirmed = window.confirm(
+            "Reset the entire winner list? This cannot be undone."
+        )
+        if (!confirmed) return
+
+        setWinnerError("")
+        setIsResettingWinners(true)
+        try {
+            await resetWinners()
+            await refreshWinners()
+        } catch (err) {
+            setWinnerError(err.message || "Could not reset winners")
+        } finally {
+            setIsResettingWinners(false)
+        }
+    }
+
+    const onResetAssignments = async () => {
+        const confirmed = window.confirm(
+            "Reset all participants? Every assigned ticket will be cleared and can be given out again."
+        )
+        if (!confirmed) return
+
+        setAssignError("")
+        setAssignNotice("")
+        setIsResettingAssignments(true)
+        try {
+            await resetAssignments()
+            setAssignNotice("All participants have been reset")
+            await refreshAssignments()
+        } catch (err) {
+            setAssignError(err.message || "Could not reset participants")
+        } finally {
+            setIsResettingAssignments(false)
         }
     }
 
@@ -300,9 +387,9 @@ function Ticket() {
     const tempCard = Card();
 
     const tabs = [
-        { id: "generate", label: "Generate tickets", count: list.length },
-        { id: "assigned", label: "Assigned list", count: assignments.length },
-        { id: "winners", label: "Winner list", count: winners.length }
+        { id: "winners", label: "Winner list", count: winners.length },
+        { id: "assigned", label: "Participant", count: assignments.length },
+        { id: "settings", label: "Admin setting", count: enabledClaims.length }
     ]
 
     return (
@@ -314,7 +401,7 @@ function Ticket() {
                     </Button>
                     <h1 className="tb-admin-title">Admin section</h1>
                     <span className="tb-toolbar__spacer" />
-                    {activeTab === "generate" && list.length > 0 &&
+                    {activeTab === "settings" && list.length > 0 &&
                         <Button variant="" className="tb-btn tb-btn--gold tb-btn--sm" onClick={() => setOpenField(v => !v)}>
                             Upload Tickets
                         </Button>
@@ -339,10 +426,12 @@ function Ticket() {
                 </div>
 
                 <div
-                    id="tb-tabpanel-generate"
+                    id="tb-tabpanel-settings"
                     role="tabpanel"
-                    aria-labelledby="tb-tab-generate"
-                    hidden={activeTab !== "generate"}>
+                    aria-labelledby="tb-tab-settings"
+                    hidden={activeTab !== "settings"}>
+                <div className="tb-admin-split">
+                    <div className="tb-admin-split__main">
                 {!list.length ?
                     <section className="tb-panel tb-gate">
                         <h2 className="tb-gate__title">Set up the game</h2>
@@ -409,6 +498,54 @@ function Ticket() {
                         </div>
                     </div>
                 }
+                    </div>
+
+                    <aside className="tb-admin-split__side">
+                        <section className="tb-panel" aria-label="Claim settings">
+                            <div className="tb-panel__head">
+                                <h2 className="tb-panel__title">Claim options</h2>
+                                <span className="tb-chip">{enabledClaims.length} on</span>
+                            </div>
+                            <p className="tb-gate__text">
+                                Turn a claim on or off. Only enabled claims appear on the caller
+                                board, player tickets, and winner submit.
+                            </p>
+                            <div className="tb-option-list">
+                                {CLAIM_OPTIONS.map(option => {
+                                    const isOn = enabledClaims.includes(option.label)
+                                    return (
+                                        <button
+                                            key={option.id}
+                                            type="button"
+                                            role="switch"
+                                            aria-checked={isOn}
+                                            className={`tb-option ${isOn ? "is-on" : ""}`}
+                                            disabled={isSavingOptions}
+                                            onClick={() => onToggleClaim(option.label)}>
+                                            <span className="tb-option__label">{option.label}</span>
+                                            <span className={`tb-switch ${isOn ? "is-on" : ""}`} aria-hidden="true" />
+                                        </button>
+                                    )
+                                })}
+                            </div>
+                            <Button
+                                variant=""
+                                className="tb-btn tb-btn--gold tb-btn--block tb-option-update"
+                                onClick={onUpdateClaimOptions}
+                                disabled={isSavingOptions || claimsUnchanged}>
+                                {isSavingOptions ? "Updating…" : "Update"}
+                            </Button>
+                            {optionsError &&
+                                <div className="tb-notice tb-winners-notice">
+                                    <strong>{optionsError}</strong>
+                                </div>
+                            }
+                            {optionsNotice && !optionsError &&
+                                <p className="tb-assign-empty">{optionsNotice}</p>
+                            }
+                        </section>
+                    </aside>
+                </div>
                 </div>
 
                 <div
@@ -435,6 +572,13 @@ function Ticket() {
                             onClick={downloadWinnersExcel}
                             disabled={!winners.length}>
                             Download winners Excel
+                        </Button>
+                        <Button
+                            variant=""
+                            className="tb-btn tb-btn--danger tb-btn--sm"
+                            onClick={onResetWinners}
+                            disabled={isResettingWinners || !winners.length}>
+                            {isResettingWinners ? "Resetting…" : "Reset"}
                         </Button>
                     </div>
 
@@ -481,9 +625,9 @@ function Ticket() {
                     role="tabpanel"
                     aria-labelledby="tb-tab-assigned"
                     hidden={activeTab !== "assigned"}>
-                <section className="tb-panel" aria-label="Assigned tickets">
+                <section className="tb-panel" aria-label="Participants">
                     <div className="tb-panel__head">
-                        <h2 className="tb-panel__title">Assigned tickets</h2>
+                        <h2 className="tb-panel__title">Participants</h2>
                         <span className="tb-chip">
                             {assignments.length} / {maxPlayers || "—"} taken
                             {remaining ? ` · ${remaining} left` : ""}
@@ -503,6 +647,13 @@ function Ticket() {
                         onClick={downloadParticipantsExcel}
                         disabled={!assignments.length}>
                         Download Excel
+                    </Button>
+                    <Button
+                        variant=""
+                        className="tb-btn tb-btn--danger tb-btn--sm"
+                        onClick={onResetAssignments}
+                        disabled={isResettingAssignments || !assignments.length}>
+                        {isResettingAssignments ? "Resetting…" : "Reset"}
                     </Button>
                     </div>
 

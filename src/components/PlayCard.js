@@ -6,6 +6,7 @@ import { useParams } from "react-router-dom"
 import claps from "../assets/clap.mp3"
 import img from "../assets/clapman.gif"
 import { claimTicket, findAssignment, normalizeEmployeeCode } from "../assignments"
+import { CLAIM_OPTIONS, parseClaimOptions } from "../claims"
 const colors = ["red", "green", "blue", "purple", "orange", "yellow"]
 const tints = {
     red: "#a3564f",
@@ -53,6 +54,7 @@ function PlayCard() {
     const [players, setPlayers] = useState(0);
     const [selectedCard, setSelectedCard] = useState([])
     const [corners, setCorners] = useState([])
+    const [enabledClaims, setEnabledClaims] = useState(() => CLAIM_OPTIONS.map(option => option.label))
     const ticketCollectionRef = collection(fireStore, "tickets")
     const [showGIF, setShowGIF] = useState(null)
 
@@ -66,6 +68,7 @@ function PlayCard() {
             setList(JSON.parse(data.list))
             setSets(data.sets)
             setPlayers(data.players)
+            setEnabledClaims(parseClaimOptions(data.options))
         }
         getTickets()
     }, [])
@@ -204,14 +207,19 @@ function PlayCard() {
         setShowGIF(null)
     }
 
-    const claimRows = (count) => ([
-        { label: "Early 5", done: count.all >= 5 },
-        { label: "Top Line", done: count.top == 5 },
-        { label: "Middle Line", done: count.middle == 5 },
-        { label: "Bottom Line", done: count.bottom == 5 },
-        { label: "Four Corners", done: count.corner == 4 },
-        { label: "Full House", done: count.all == 15 }
-    ])
+    const claimRows = (count) => {
+        const doneByLabel = {
+            "Early 5": count.all >= 5,
+            "Top Line": count.top == 5,
+            "Middle Line": count.middle == 5,
+            "Bottom Line": count.bottom == 5,
+            "Four Corners": count.corner == 4,
+            "Full House": count.all == 15
+        }
+        return CLAIM_OPTIONS
+            .filter(option => enabledClaims.includes(option.label))
+            .map(option => ({ label: option.label, done: !!doneByLabel[option.label] }))
+    }
 
     return (
         <div className="tb-app">
@@ -366,6 +374,7 @@ function PlayCard() {
                                             <img src={img} alt="Applause" />
                                             <span>Full House!</span>
                                         </div> :
+                                        claimRows(count).length > 0 &&
                                         <div className="tb-claimlist">
                                             <div className="tb-claimlist__title">Claims</div>
                                             {claimRows(count).map(claim =>
